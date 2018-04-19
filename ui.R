@@ -67,22 +67,20 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                    )
                                  )
                         )),
-                        tabPanel("Explore",
+                        tabPanel("Explore Your Data",
                                  tabsetPanel(
                                  tabPanel("Explore Taxa",
                                           mainPanel(
                                                fluidRow(column(4, sliderInput("taxaDims", 
                                                                      "Taxa Level",
-                                                                     5, min = 1, max = 8))),
-                                               fluidRow(column(4, uiOutput("ex_delimiter"))),
+                                                                     5, min = 1, max = 8)),
+                                                        column(4, sliderInput("taxa_limit",
+                                                                              "Taxa Proportions",
+                                                                              1, min = 0, max = 1, step = 0.05,
+                                                                              value = c(0.75,1)))),
+                                               fluidRow(column(6, uiOutput("ex_delimiter"))),
                                                tags$head(tags$style(
-                                                 "#ex_delimiter {color:grey; font-size:16px}")),
-                                               fluidRow(column(4, numericInput("upper_limit",
-                                                                     "Taxa upper limit",
-                                                                     1, min = 0, max = 1, step = 0.1)),
-                                                        column(4, numericInput("lower_limit",
-                                                                     "Taxa lower limit",
-                                                                     0, min=0, max=1, step =0.1))),
+                                                 "#ex_delimiter {color:white; font-size:16px}")),
                                                fluidRow(uiOutput("TaxaDimExp")),
                                                fluidPage(
                                                  fluidRow(column(12, plotOutput("key1", height = '50px', width = '100%'))),
@@ -92,8 +90,9 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                                         downloadButton("species_raw_data", "Download Table")),
                                                fluidRow(uiOutput("taxa_selectors")),
                                                #fluidPage(
-                                                 fluidRow(column(12, plotOutput("key2", height = '50px', width = "100%"))),
-                                                 fluidRow(column(12, uiOutput("da_taxa_heat_UI"))),
+                                               fluidRow(textOutput("curr_taxa_exp")),
+                                               fluidRow(column(12, plotOutput("key2", height = '50px', width = "100%"))),
+                                               fluidRow(column(12, uiOutput("da_taxa_heat_UI"))),
                                                fluidRow(column(12, uiOutput("da_taxa_stat_ui"))),
                                                width = 11)),
                                                #fluidRow(tableOutput("da_taxa_labs")),
@@ -102,6 +101,7 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                           mainPanel(
                                             textOutput("instructions"),
                                             fluidRow(uiOutput("feat_selectors")),
+                                            fluidRow(textOutput("curr_select_exp")),
                                             fluidRow(
                                               column(6, fluidPage(
                                                 plotOutput("key4", height = '50px'),
@@ -109,32 +109,35 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                               column(6, fluidPage(
                                                 plotOutput("key5", height = '50px'),
                                                 plotlyOutput("Plot3")))),
-                                            fluidRow(column(12, uiOutput("da_feat_stat_ui"))),
+                                            fluidRow(column(6, fluidPage(uiOutput("da_feat_stat_ui")))),
                                             #fluidPage(
                                              # fluidRow(column(8, plotOutput("key3", height = '40px'))),
                                             #  fluidRow(column(8, plotlyOutput("gene_explore")))),
                                             fluidRow(downloadButton("gene_explore_download", "Download Plot")),
                                             width = 12))
                         )),
-                 tabPanel("Search",
+                 tabPanel("Query Your Data",
                           tabsetPanel(
                             tabPanel("Gene Search",
                                      fluidRow(column(4,
                                                      selectizeInput('acc_list', choices=NULL,
-                                                                    label = h3("Begin by selecting gene families of interest"),
-                                                                    multiple = TRUE)),
-                                              column(10,
-                                                     checkboxInput('xy_switch', label = 'group by Gene Family?')
-                                              )),
+                                                                    label = h3("Select a Feature"),
+                                                                    multiple = TRUE))#,
+                                              #column(10, checkboxInput('xy_switch', label = 'group by Gene Family?')
+                                              ),
                                      hr(),
                                      fluidPage(
-                                       fluidRow(column(7,plotOutput("plot1", height = '500px', click = 'plot_click')),
+                                       fluidRow(textOutput("curr_select_search")),
+                                       fluidRow(column(7, fluidPage(plotOutput("key7", height = '50px'),
+                                                                    plotlyOutput("plot1", height = '500px'))),
+                                                #column(7,plotOutput("plot1", height = '500px', click = 'plot_click'))
                                                 column(5, fluidPage(plotOutput("key6", height = '50px'),
                                                                     plotlyOutput("spec_select", height = '450px')))
-                                                )
+                                                ),
+                                       fluidRow(column(7, fluidPage(uiOutput("select_feat_stat_ui"))))
                                        ),
                                      fluidRow(downloadButton("expression_download", "Download Plot")),
-                                     h5("Pairwise T-test results are performed here if at least 2 groups are selected"),
+                                     #h5("Pairwise T-test results are performed here if at least 2 groups are selected"),
                                      fluidRow(column(8,uiOutput("exp_heat"))),
                                      fluidRow(uiOutput("exp_heat_download")),
                                      fluidRow(column(6, align= "center", tableOutput("exp_table"))),

@@ -15,7 +15,7 @@ bug_levels <- strsplit(bugg_fix, ";")
 tax_lev <- c()
 for (i in 1:length(bug_levels)){
   bug_len <- length(bug_levels[[i]])
-  if (bug_len == 2){
+  if (bug_len == 4){
     tax_lev <- c(tax_lev, i)
   }
 }
@@ -62,6 +62,8 @@ summer <- sum(spec_g_data2[,2])
 spec_g_data2$prop <- spec_g_data2[,2]/summer
 spec_g_data3 <- subset(spec_g_data2, prop < 1)#input$upper_limit)
 spec_g_data4 <- subset(spec_g_data3, prop > 0)#input$lower_limit)
+
+cc = quantile(spec_g_data2$prop, 0.5)
 
 keep_taxa <- as.character(unlist(spec_g_data4[,1]))
 spec_g_data_filt <- subset(spec_g_data, Taxa %in% keep_taxa)
@@ -494,20 +496,25 @@ x <- sweep(x, 1L, sx, "/", check.margin = FALSE)
 heatmap.3(x, dendorgram = 'none', Colv = F, Rowv = F, margin=c(10,3))
 
 RA <- unlist(x)
+RA <- unlist(spec_new)
 RA_clr <- unlist(cc)
-sample_id <- rep(colnames(spec_nums), 250)
+sample_id <- rep(colnames(spec_new), each = 250)
 group <- c(rep("arm", 12), rep("vag", 11), rep('sal', 12), rep("sto", 12))
-Group <- rep(group, 250)
-Taxa <- rep(rownames(cc), each = 47)
+Group <- rep(group, each = 250)
+Taxa <- rep(rownames(spec_new), 47)
 
 stat_df <- data.frame(Sample = sample_id, Group = Group, RA = RA,
                       RA_clr = RA_clr, Taxa = Taxa)
 
-
+head(RA)
+head(sample_id)
+head(Taxa)
+table(Group)
 #a_test <- anova(lm(RA_clr ~ Group + Taxa, stat_df))
 uniq_bugs <- as.character(unlist(unique(stat_df$Taxa)))
 stat_results <- data.frame(Taxa = NA, F_val = NA, P_val = NA)
 hoc_results <- data.frame(Taxa = NA, Int = NA, p_adj = NA)
+i=194
 for (i in 1:length(uniq_bugs)){
   bug <- uniq_bugs[i]
   test <- subset(stat_df, Taxa == bug)
@@ -520,7 +527,7 @@ for (i in 1:length(uniq_bugs)){
   if (result$P_val < 0.05){
     h_test <- aov(RA ~ Group, test)
     tk <- TukeyHSD(h_test, "Group")
-    result <- data.frame(Taxa = rep(uniq_bugs[i], ncol(combn(length(unique(hoc_df$Group)), 2))),
+    result <- data.frame(Taxa = rep(uniq_bugs[i], ncol(combn(length(unique(test$Group)), 2))),
                          Int = rownames(tk$Group),
                          p_adj = tk$Group[,4])
     hoc_results <- rbind(hoc_results, result)
@@ -530,6 +537,8 @@ stat_results$p_adj <- p.adjust(stat_results$P_val, method = "BH")
 keepers <- subset(stat_results, p_adj < 0.05)$Taxa
 
 hoc2 <- subset(hoc_results, p_adj < 0.05)
+
+keepers <- unique(hoc2$Taxa)
 
 ## post hoc?
 hoc_df <- subset(stat_df, Taxa %in% keepers)
@@ -556,7 +565,7 @@ length(unique(hoc_good$Taxa))
 ##
 
 
-go_show <- subset(spec_df, Group.1 %in% keepers)
+go_show <- subset(spec_new, rownames(spec_new) %in% keepers)
 
 
 go_show_nums <- go_show[,-1]
@@ -1015,7 +1024,11 @@ ax <- list(
 p <- plot_ly(
   x = plotter$names, y = plotter$feat,
   z = plotter$Z_scored_CPM, type = "heatmap",
-  colorbar = list(x = -0.2, xanchor = 'left')) %>%
+  colorbar = list(x = -0.2, 
+                  xanchor = 'left',
+                  tickmode='array',
+                  tickvals = c(min(plotter$Z_scored_CPM),max(plotter$Z_scored_CPM)),
+                  ticktext = c("low", "high"))) %>%
   layout(yaxis = ax, xaxis = ax)
 p
 
@@ -1352,3 +1365,37 @@ cc <- runif(200, 0,100)
 quantile(cc, 0.5)
 
 max(cc)
+
+
+
+
+title("Your title", line= -14.5)
+
+c1 <- c(0.03, 1)
+c2 <- c(4, 0.03)
+resm <- rbind(c1, c2)
+
+resm[1,2] = 0.03 + 0.0000001
+
+
+
+
+#
+#
+#
+
+#
+######## 
+
+x <- replicate(10, rnorm(20)) 
+heatmap.3(x)
+
+cc <- hclust(dist(x))
+plot(cc)
+
+cc$order
+
+
+cc <- data.frame(clr(x))
+unlist(cc)
+heatmap.3(data.matrix(cc))

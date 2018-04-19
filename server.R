@@ -338,7 +338,7 @@ server <- function(input, output, session) {
   # Generate selection list of gene families
   acc_select <- reactive({
     accs <- acc_full()
-    accs$Feature = paste(" ", accs$Feature, " ", sep = "") #ensure unique gene families
+    #accs$Feature = paste(" ", accs$Feature, " ", sep = "") #ensure unique gene families
     accs$Feature
   })
    
@@ -837,6 +837,34 @@ server <- function(input, output, session) {
     grid.draw(legend)
   }, bg="transparent")
   
+  
+  output$key7 <- renderPlot({
+    validate(
+      need(!is.null(new_group_names()[[1]]), "")
+    )
+    #print(is.null(new_group_names()[[1]]))
+    groupings = new_group_names()
+    cols_cols <- color_select()
+    
+    n <- length(groupings)
+    Group = groupings
+    
+    plotplot <- data.frame(Group,cols_cols)
+    plotplot$Group <- factor(plotplot$Group, levels = groupings)
+    
+    gg = ggplot(plotplot, aes(1:n, 1:n, color = Group)) +
+      geom_point() +
+      guides(color = guide_legend(direction = "horizontal",
+                                  override.aes = list(shape = 15, size=9)))+
+      scale_color_manual(values = cols_cols) + 
+      theme(legend.key = element_rect(fill = "transparent"),
+            legend.text = element_text(size = 15),
+            legend.title = element_text(size = 28))
+    
+    legend <- g_legend(gg) 
+    grid.draw(legend)
+  }, bg="transparent")
+  
   #
   #
   #
@@ -877,98 +905,102 @@ server <- function(input, output, session) {
     feat_var2
   })
   
-  output$gene_explore <- renderPlotly({
-    nums <- feat_mat()
-    
-    groupings = new_group_names()
-    grouping_nums = group_dims()
-    
-    bin <- c()
-    for (i in 1:length(groupings)){
-      use <- rep(groupings[i], grouping_nums[i])
-      bin <- c(bin, use)
-    }
-    colss = bin
-    cc = length(unique(bin))
-    cols <- randomColor(length(groupings))
-    
-    for (i in 1:cc){
-      colss = gsub(groupings[i], cols[i], colss)
-    }
-    
-    col_col <- t(matrix(colss))
-    col_col <- rbind(col_col, col_col)
-    
-    heatty = heatmap.3(t(t(nums)), scale = 'row', margins = c(5,5), col = viridis(100),
-              labCol = "", labRow = "",
-              Colv = F, ColSideColors = t(col_col))
-    
-    #legend(0.22,0.99,      
-    #       legend = groupings,
-    #       col = cols, 
-    #       lty= 1,             
-    #       lwd = 5,           
-    #       cex=1,
-    #       horiz = T
-    #)
-    
-    gg_nums <- nums
-    
-    gg_nums_feat <- gg_nums[heatty$rowInd,]
-    gg_nums_samp <- gg_nums_feat[,heatty$colInd]
-    
-    gg_names <- factor(colnames(gg_nums_samp), levels = colnames(gg_nums_samp))
-    gg_feat <- factor(rownames(gg_nums_samp), levels = rownames(gg_nums_samp))
-    
-    x <- sweep(gg_nums_samp, 1L, rowMeans(gg_nums_samp, na.rm = T), check.margin = FALSE)
-    sx <- apply(x, 1L, sd, na.rm = T)
-    x <- sweep(x, 1L, sx, "/", check.margin = FALSE)
-    
-    ## for taxa plot later
-    #gene_order= hclust(dist(x))
-    #plot(gene_order)
-    ###
-    
-    Z_scored_CPM <- unlist(x)
-    head(Z_scored_CPM)
-    
-    
-    names <- rep(gg_names, each = nrow(gg_nums))
-    feat <- rep(gg_feat, ncol(gg_nums))
-    groups <- rep(bin, each = nrow(gg_nums))
-    
-    
-    plotter <- data.frame(Z_scored_CPM, names, groups, feat)
-    ###
-    ##
-    ### make gmain in plotly!!!!
-    library(plotly)
-    
-    ax <- list(
-      title = "",
-      zeroline = FALSE,
-      showline = FALSE,
-      showticklabels = FALSE,
-      tickcolor = 'white',
-      showgrid = FALSE
-    )
-    p <- plot_ly(source = "source",
-                 x = plotter$names, y = plotter$feat,
-                 text = plotter$groups,
-                 z = plotter$Z_scored_CPM, type = "heatmap",
-                 hoverinfo = 'y+text',
-                 colorbar = list(x = -0.2, xanchor = 'left')) %>%
-      layout(yaxis = ax, xaxis = ax)
-    
-    ####
-    p3 <- subplot(colorer(),
-                  p, nrows = 2, margin = c(0,0,-0.01,0),
-                  heights = c(0.1, 0.9), shareX = T)
-    
-    p3
-    
-  })
-  
+  # output$gene_explore <- renderPlotly({
+  #   nums <- feat_mat()
+  #   
+  #   groupings = new_group_names()
+  #   grouping_nums = group_dims()
+  #   
+  #   bin <- c()
+  #   for (i in 1:length(groupings)){
+  #     use <- rep(groupings[i], grouping_nums[i])
+  #     bin <- c(bin, use)
+  #   }
+  #   colss = bin
+  #   cc = length(unique(bin))
+  #   cols <- randomColor(length(groupings))
+  #   
+  #   for (i in 1:cc){
+  #     colss = gsub(groupings[i], cols[i], colss)
+  #   }
+  #   
+  #   col_col <- t(matrix(colss))
+  #   col_col <- rbind(col_col, col_col)
+  #   
+  #   heatty = heatmap.3(t(t(nums)), scale = 'row', margins = c(5,5), col = viridis(100),
+  #             labCol = "", labRow = "",
+  #             Colv = F, ColSideColors = t(col_col))
+  #   
+  #   #legend(0.22,0.99,      
+  #   #       legend = groupings,
+  #   #       col = cols, 
+  #   #       lty= 1,             
+  #   #       lwd = 5,           
+  #   #       cex=1,
+  #   #       horiz = T
+  #   #)
+  #   
+  #   gg_nums <- nums
+  #   
+  #   gg_nums_feat <- gg_nums[heatty$rowInd,]
+  #   gg_nums_samp <- gg_nums_feat[,heatty$colInd]
+  #   
+  #   gg_names <- factor(colnames(gg_nums_samp), levels = colnames(gg_nums_samp))
+  #   gg_feat <- factor(rownames(gg_nums_samp), levels = rownames(gg_nums_samp))
+  #   
+  #   x <- sweep(gg_nums_samp, 1L, rowMeans(gg_nums_samp, na.rm = T), check.margin = FALSE)
+  #   sx <- apply(x, 1L, sd, na.rm = T)
+  #   x <- sweep(x, 1L, sx, "/", check.margin = FALSE)
+  #   
+  #   ## for taxa plot later
+  #   #gene_order= hclust(dist(x))
+  #   #plot(gene_order)
+  #   ###
+  #   
+  #   Z_scored_CPM <- unlist(x)
+  #   head(Z_scored_CPM)
+  #   
+  #   
+  #   names <- rep(gg_names, each = nrow(gg_nums))
+  #   feat <- rep(gg_feat, ncol(gg_nums))
+  #   groups <- rep(bin, each = nrow(gg_nums))
+  #   
+  #   
+  #   plotter <- data.frame(Z_scored_CPM, names, groups, feat)
+  #   ###
+  #   ##
+  #   ### make gmain in plotly!!!!
+  #   library(plotly)
+  #   
+  #   ax <- list(
+  #     title = "",
+  #     zeroline = FALSE,
+  #     showline = FALSE,
+  #     showticklabels = FALSE,
+  #     tickcolor = 'white',
+  #     showgrid = FALSE
+  #   )
+  #   p <- plot_ly(source = "g_exp",
+  #                x = plotter$names, y = plotter$feat,
+  #                text = plotter$groups,
+  #                z = plotter$Z_scored_CPM, type = "heatmap",
+  #                hoverinfo = 'y+text',
+  #                colorbar = list(x = -0.2, 
+  #                                xanchor = 'left',
+  #                                tickmode='array',
+  #                                tickvals = c(min(plotter$Z_scored_CPM),max(plotter$Z_scored_CPM)),
+  #                                ticktext = c("low", "high"))) %>%
+  #     layout(yaxis = ax, xaxis = ax)
+  #   
+  #   ####
+  #   p3 <- subplot(colorer(),
+  #                 p, nrows = 2, margin = c(0,0,-0.01,0),
+  #                 heights = c(0.1, 0.9), shareX = T)
+  #   
+  #   p3
+  #   
+  # })
+  # 
   
   da_feat_stat <- reactive({
     withProgress({
@@ -994,7 +1026,7 @@ server <- function(input, output, session) {
         
         RA <- unlist(feat_order)
         RA_clr <- unlist(cc)
-        sample_id <- rep(colnames(feat_order), nrow(feat_order))
+        sample_id <- rep(colnames(feat_order), each = nrow(feat_order))
         
         group_titles = c()
         for (i in 1:length(groupings)) {
@@ -1004,9 +1036,9 @@ server <- function(input, output, session) {
           group_titles = c(group_titles, title_rep)
         }
         
-        group_titles2 = rep(group_titles, nrow(feat_order))
+        group_titles2 = rep(group_titles, each = nrow(feat_order))
         
-        Feature <- rep(rownames(cc), each = ncol(cc))
+        Feature <- rep(rownames(cc), ncol(cc))
         
         stat_df <- data.frame(Sample = sample_id, Group = group_titles2, RA = RA,
                               RA_clr = RA_clr, Feature = Feature)
@@ -1024,13 +1056,16 @@ server <- function(input, output, session) {
                                F_val = a_test$`F value`[1],
                                P_val = a_test$`Pr(>F)`[1])
           stat_results <- rbind(stat_results, result)
-          if (result$P_val < 0.05){
-            h_test <- aov(RA ~ Group, test)
-            tk <- TukeyHSD(h_test, "Group")
-            hresult <- data.frame(Feat = rep(uniq_feat[i], ncol(combn(length(unique(test$Group)), 2))),
-                                 Int = rownames(tk$Group),
-                                 p_adj = tk$Group[,4])
-            hoc_results <- rbind(hoc_results, hresult)
+          if (is.na(result$P_val)){}
+          else{
+            if (result$P_val < 0.05){
+              h_test <- aov(RA ~ Group, test)
+              tk <- TukeyHSD(h_test, "Group")
+              hresult <- data.frame(Feat = rep(uniq_feat[i], ncol(combn(length(unique(test$Group)), 2))),
+                                    Int = rownames(tk$Group),
+                                    p_adj = tk$Group[,4])
+              hoc_results <- rbind(hoc_results, hresult)
+            }
           }
         }
         stat_results$p_adj <- p.adjust(stat_results$P_val, method = "BH")
@@ -1100,7 +1135,6 @@ server <- function(input, output, session) {
     } else {
       keepers <- unique(subset(stat_results, p_adj < input$feat_pval_up)$Feat)
       print(length(keepers))
-      print(stat_results[1:5,])
       keepers
     }
     keepers
@@ -1122,62 +1156,24 @@ server <- function(input, output, session) {
       groupings = new_group_names()
       grouping_nums = group_dims()
       
-      go_show <- feat_order[da_gene,]
       
-      #go_show_nums2 <- log10(go_show + 1)
-      go_show_nums2 <- go_show + 1
-      
-      #cc = rownames(go_show_nums2)
-      #cc = factor(cc, levels = cc)
-      #levels(cc) <- 1:length(levels(cc))
-      #x <- as.numeric(cc)
-      
-      #rownames(go_show_nums2) <- x
-      
-      ### colors
       bin <- c()
       for (i in 1:length(groupings)){
         use <- rep(groupings[i], grouping_nums[i])
         bin <- c(bin, use)
       }
-      colss = bin
-      cc = length(unique(bin))
-      cols <- randomColor(length(groupings))
       
-      for (i in 1:cc){
-        colss = gsub(groupings[i], cols[i], colss)
-      }
       
-      col_col <- t(matrix(colss))
-      col_col <- rbind(col_col, col_col)
+      go_show <- feat_order[da_gene,]
       
-      margin_factor <- nrow(go_show_nums2)
-      
-      if (margin_factor > 20) {
-        marg_side <- 1
-      } else {
-        marg_side <- (1/margin_factor)*30
-      }
-      
-      go_show_nums2[is.na(go_show_nums2)] <- 0
-      heatty = heatmap.3(t(t(go_show_nums2)), scale = 'row', col = viridis(100),
-                         margins = c(5,5),
-                         Colv = F, labCol = "", cexRow = marg_side,
-                         ColSideColors = t(col_col))
-      
-      #legend(-0.05,0.94,      
-      #       legend = groupings,
-      #       col = cols, 
-      #       lty= 1,             
-      #       lwd = 5,           
-      #       cex=1,
-      #       horiz = F
-      #)
+      go_show_nums2 <- log10(go_show + 1)
       
       gg_nums <- go_show_nums2
       
-      gg_nums_feat <- gg_nums[heatty$rowInd,]
-      gg_nums_samp <- gg_nums_feat[,heatty$colInd]
+      feat_clust <- hclust(dist(gg_nums))
+      
+      gg_nums_feat <- gg_nums[feat_clust$order,]
+      gg_nums_samp <- gg_nums_feat
       
       gg_names <- factor(colnames(gg_nums_samp), levels = colnames(gg_nums_samp))
       gg_feat <- factor(rownames(gg_nums_samp), levels = rownames(gg_nums_samp))
@@ -1191,16 +1187,17 @@ server <- function(input, output, session) {
       #plot(gene_order)
       ###
       
+      #Z_scored_CPM = unlist(data.frame(clr(gg_nums_samp)))
       Z_scored_CPM <- unlist(x)
-      head(Z_scored_CPM)
-      
+      #print(head(Z_scored_CPM))
+
       
       names <- rep(gg_names, each = nrow(gg_nums))
       feat <- rep(gg_feat, ncol(gg_nums))
       groups <- rep(bin, each = nrow(gg_nums))
       
-      
       plotter <- data.frame(Z_scored_CPM, names, groups, feat)
+      
       ###
       ##
       ### make gmain in plotly!!!!
@@ -1214,12 +1211,16 @@ server <- function(input, output, session) {
         tickcolor = 'white',
         showgrid = FALSE
       )
-      p <- plot_ly(source = "source",
+      p <- plot_ly(source = "g_exp",
         x = plotter$names, y = plotter$feat,
         text = plotter$groups,
         z = plotter$Z_scored_CPM, type = "heatmap",
         hoverinfo = 'y+text',
-        colorbar = list(x = -0.2, xanchor = 'left')) %>%
+        colorbar = list(x = -0.2, 
+                        xanchor = 'left',
+                        tickmode='array',
+                        tickvals = c(min(plotter$Z_scored_CPM),max(plotter$Z_scored_CPM)),
+                        ticktext = c("low", "high"))) %>%
         layout(yaxis = ax, xaxis = ax)
       
       ####
@@ -1234,10 +1235,14 @@ server <- function(input, output, session) {
   })
   
   output$Plot3 <- renderPlotly({
-    event.data <- event_data("plotly_click", source = "source")
+    event.data <- event_data("plotly_click", source = "g_exp")
     
     # If NULL dont do anything
-    if(is.null(event.data) == T) return(NULL)
+    #if(is.null(event.data) == T) return(NULL)
+    validate(
+      need(is.null(event.data) == F, "Click on the Heatmap") %then%
+        need(event.data$y %in% full_file_feature()$Feature, "Click on the Heatmap")
+    )
     
     select_gfam <- event.data$y
     
@@ -1272,6 +1277,22 @@ server <- function(input, output, session) {
     #print(length(RA))
     plotter <- data.frame(Sample_id, Taxa, Group, RA)
     
+    #### filter to speed up plotting!!!!
+    plotter2 <- aggregate(plotter$RA, list(plotter$Taxa), sum)
+    
+    summer <- sum(plotter2[,2])
+    plotter2$prop <- plotter2[,2]/summer
+    plotter3 <- subset(plotter2, 
+                           prop <= quantile(plotter2$prop, input$taxa_limit[2]))
+    plotter4 <- subset(plotter3, 
+                           prop > quantile(plotter3$prop, input$taxa_limit[1]))
+    
+    keep_taxa <- as.character(unlist(plotter4[,1]))
+    plotter2 <- subset(plotter, Taxa %in% keep_taxa)
+    
+    ####
+    plotter <- plotter2
+
     bug_sorter <- plotter[order(plotter$RA, decreasing = T),]
     bug_sort <- as.character(unique(bug_sorter$Taxa))
     plotter$Taxa <- factor(plotter$Taxa, levels = bug_sort)
@@ -1280,7 +1301,8 @@ server <- function(input, output, session) {
       stat_summary(fun.y = "mean", geom = "bar", position = "fill") +
       scale_fill_manual(values = randomColor(length(unique(plotter$Taxa))),
                         na.value = "grey") +
-      ggtitle(select_gfam) + xlab("Sample") + ylab("Relative Abundance") +
+      #ggtitle(select_gfam) + 
+      xlab("Sample") + ylab("Relative Abundance") +
       theme(legend.position='none',
             panel.background = element_blank(),
             axis.text.x = element_blank())
@@ -1299,70 +1321,38 @@ server <- function(input, output, session) {
   ##### DA gene post hoc test!
   
   da_feat_stat_mat <- reactive({
-    event.data <- event_data("plotly_click", source = "source")
+    event.data <- event_data("plotly_click", source = "g_exp")
+    
+    validate(
+      need(is.null(event.data) == F, "Click on the Heatmap")
+    )
     
     if (input$input_type == "Biobakery"){
-      feat_order <- reorder_mat()
+      validate(
+        need(event.data$y %in% da_feat_stat()$Feat, "Click on the Heatmap")
+      )
       
       groupings = new_group_names()
       grouping_nums = group_dims()
-      
-      feat_trans <- clr(feat_order)
-      cc <- data.frame(feat_trans)
-      #boxplot.matrix(spec_trans)
-      
-      x <- sweep(feat_order, 1L, rowMeans(feat_order, na.rm = T), check.margin = FALSE)
-      sx <- apply(x, 1L, sd, na.rm = T)
-      x <- sweep(x, 1L, sx, "/", check.margin = FALSE)
-      
-      
-      RA <- unlist(x)
-      RA_clr <- unlist(cc)
-      sample_id <- rep(colnames(feat_order), nrow(feat_order))
-      
-      group_titles = c()
-      for (i in 1:length(groupings)) {
-        title = groupings[i]
-        reps = grouping_nums[i]
-        title_rep = rep(title, reps)
-        group_titles = c(group_titles, title_rep)
-      }
-      
-      group_titles2 = rep(group_titles, nrow(feat_order))
-      
-      Feat <- rep(rownames(cc), each = ncol(cc))
-      
-      stat_df <- data.frame(Sample = sample_id, Group = group_titles2, RA = RA,
-                            RA_clr = RA_clr, Feat = Feat)
-      
       
       #### now select bug
       
       select_feat <- event.data$y
       
-      ### what are you selecting
       statter <- da_feat_stat()
       statter2 <- subset(statter, Feat %in% select_feat)
-      print(statter2)
-      
-      #### SOLUTION!!!!!! USE HOC RESULTS TO SELECT YOU"RE HOC-ING the ADJ P VALS DUMMY
-      
-      
-      hoc_df <- subset(stat_df, Feat %in% select_feat)
-      uniq_feat <- as.character(unlist(unique(hoc_df$Feat)))
-      test <- subset(stat_df, Feat == uniq_feat)
-      
-      h_test <- aov(RA ~ Group, test)
-      tk <- TukeyHSD(h_test, "Group")
       
       group_num <- length(groupings)
+      group1 <- gsub('.*-', "", statter2$Int[1])
+      group_rest <- gsub("-.*", "", statter2$Int[1:(group_num-1)])
+      group_names <- c(group1, group_rest)
       
       resm <- matrix(NA, group_num, group_num)
-      resm[lower.tri(resm) ] <-round(tk$Group[,4], 4)
+      resm[lower.tri(resm) ] <-round(statter2$p_adj, 4)
       resm <- t(resm)
-      resm[lower.tri(resm) ] <-round(tk$Group[,4], 4)
-      rownames(resm) <- levels(test$Group)
-      colnames(resm) <- levels(test$Group)
+      resm[lower.tri(resm) ] <-round(statter2$p_adj, 4)
+      rownames(resm) <- group_names
+      colnames(resm) <- group_names
       print(resm)
       resm
       
@@ -1404,85 +1394,387 @@ server <- function(input, output, session) {
   
   
   observe({
-    event.data <- event_data("plotly_click", source = "source")
+    event.data <- event_data("plotly_click", source = "g_exp")
     
     # If NULL dont do anything
     if (is.null(event.data) == T){
     } else {
-      
-      if (input$numInputs > 2){
-        output$da_feat_stat_heat <- renderPlot({
-          resm <- da_feat_stat_mat()
-          
-          resm_lab <- resm
-          resm_lab[resm_lab < 0.0001] <- "<0.0001"
-          
-          
-          if (any(resm<0.05, na.rm = T)){
-            breaker = seq(0, 0.05, by = 0.0005)
-            coler = c(colorRampPalette(c("red", "white"))(n=100))
-          } else {
-            breaker <- seq(0, 1, by = 0.01)
-            coler <- c(colorRampPalette(c("white"))(n=100))
-          }
-          
-          select_feat <- event.data$y
-          #new_name <- unlist(strsplit(select_feat, ";"))
-          #new_name <- new_name[length(new_name)]
-          
-          par(cex.main=0.8)
-          heatmap.3(data.matrix(resm),
-                    cellnote = resm_lab,
-                    notecol="black",
-                    main=select_feat,
-                    #key = TRUE,
-                    #keysize = 1.0,
-                    key.title = NULL,
-                    breaks = breaker,
-                    col = coler,
-                    #breaks = seq(0, 0.05, by = 0.0005),
-                    #col=c(colorRampPalette(c("red", "white"))(n=100)),
-                    dendrogram = 'none',
-                    Rowv=F,
-                    Colv=F,
-                    margins=c(10,10),
-                    cexRow=1.2,
-                    cexCol=1.2#,
-                    #na.color="gray60"
-          )
-        })
-      } else {
-        output$da_feat_stat_tab <- renderTable({
-          resm <- da_feat_stat_mat()
-          
-          resm_lab <- resm
-          resm_lab[resm_lab < 0.0001] <- "<0.0001"
-          resm_lab <- cbind(Names = rownames(resm_lab), resm_lab)
-          resm_lab
-        }, caption = {
-          select_taxa <- event.data$y
-          return(select_taxa)
-        })
-      }
+      output$da_feat_stat_heat <- renderPlot({
+        resm <- da_feat_stat_mat()
+        
+        resm_lab <- resm
+        resm_lab[resm_lab < 0.0001] <- "<0.0001"
+        
+        
+        if (any(resm<0.05, na.rm = T)){
+          breaker = seq(0, 0.05, by = 0.0005)
+          coler = c(colorRampPalette(c("red", "white"))(n=100))
+        } else {
+          breaker <- seq(0, 1, by = 0.01)
+          coler <- c(colorRampPalette(c("white"))(n=100))
+        }
+        
+        select_feat <- event.data$y
+        #new_name <- unlist(strsplit(select_feat, ";"))
+        #new_name <- new_name[length(new_name)]
+        
+        if (input$numInputs == 2){
+          resm[1,2] = resm[1,2] + 0.0000001
+        }
+        
+        par(cex.main=0.8)
+        heatmap.3(data.matrix(resm),
+                  cellnote = resm_lab,
+                  notecol="black",
+                  #main=select_feat,
+                  #key = TRUE,
+                  #keysize = 1.0,
+                  key.title = NULL,
+                  sepcolor="black",
+                  breaks = breaker,
+                  col = coler,
+                  #breaks = seq(0, 0.05, by = 0.0005),
+                  #col=c(colorRampPalette(c("red", "white"))(n=100)),
+                  dendrogram = 'none',
+                  Rowv=F,
+                  Colv=F,
+                  margins=c(5,5),
+                  cexRow=1.2,
+                  cexCol=1.2#,
+                  #na.color="gray60"
+        )
+        title(select_feat, line= -2.5)
+      })
+    }
+  })
+  
+  
+  observe({
+    event.data <- event_data("plotly_click", source = "g_exp")
+    
+    # If NULL dont do anything
+    if (is.null(event.data) == T){
+    } else {
+      output$da_feat_stat_tab <- renderTable({
+        resm <- da_feat_stat_mat()
+        resm_lab <- resm
+        resm_lab[resm_lab < 0.0001] <- "<0.0001"
+        resm_lab <- cbind(Names = rownames(resm_lab), resm_lab)
+        resm_lab
+      }, caption = {
+        select_taxa <- event.data$y
+        return(select_taxa)
+      })
     }
   })
   
   observe({
-    if (input$numInputs > 2){
       output$da_feat_stat_ui <- renderUI({
         plotOutput("da_feat_stat_heat")
       })
-    } else {
-      output$da_feat_stat_ui <- renderUI({
-        div(tableOutput("da_feat_stat_tab"),
-            tags$style(HTML(".table {font-size:18px; }",
-                            "caption {color:#ebebeb")))
-      })
+  })
+  
+  #### new plot1 for selectable features
+  
+  ####
+  
+  output$plot1 <- renderPlotly({
+    validate(
+      need(length(input$acc_list) > 0, "")
+    )
+    
+    da_gene <- input$acc_list
+    feat_order <- reorder_mat()
+    
+    groupings = new_group_names()
+    grouping_nums = group_dims()
+    
+    
+    bin <- c()
+    for (i in 1:length(groupings)){
+      use <- rep(groupings[i], grouping_nums[i])
+      bin <- c(bin, use)
     }
+    
+    go_show <- subset(feat_order, rownames(feat_order) %in% da_gene)
+    
+    go_show_nums2 <- log10(go_show + 1)
+    
+    x <- sweep(go_show_nums2, 1L, rowMeans(go_show_nums2, na.rm = T), check.margin = FALSE)
+    sx <- apply(x, 1L, sd, na.rm = T)
+    x <- sweep(x, 1L, sx, "/", check.margin = FALSE)
+    
+    Z_scored_CPM <- unlist(x)
+    
+
+    names <- rep(colnames(go_show_nums2), each = nrow(go_show_nums2))
+    feat <- rep(rownames(go_show_nums2), ncol(go_show_nums2))
+    groups <- rep(bin, each = nrow(go_show_nums2))
+    
+    plotter <- data.frame(Z_scored_CPM, names, groups, feat)
+    
+    plotter$names <- factor(plotter$names, levels = colnames(go_show_nums2))
+
+    ###
+    ##
+    ### make gmain in plotly!!!!
+    library(plotly)
+    
+    ax <- list(
+      title = "",
+      zeroline = FALSE,
+      showline = FALSE,
+      showticklabels = FALSE,
+      tickcolor = 'white',
+      showgrid = FALSE
+    )
+    p <- plot_ly(source = "g_select",
+                 x = plotter$names, y = plotter$feat,
+                 text = plotter$groups,
+                 z = plotter$Z_scored_CPM, type = "heatmap",
+                 hoverinfo = 'y+text',
+                 colorbar = list(x = -0.2, 
+                                 xanchor = 'left',
+                                 tickmode='array',
+                                 tickvals = c(min(plotter$Z_scored_CPM),max(plotter$Z_scored_CPM)),
+                                 ticktext = c("low", "high"))) %>%
+      layout(yaxis = ax, xaxis = ax)
+    
+    ####
+    p3 <- subplot(colorer(),
+                  p, nrows = 2, margin = c(0,0,-0.01,0),
+                  heights = c(0.1, 0.9), shareX = T)
+    
+    p3
+    
+  })
+  
+  
+  ##### new spec select plot
+  
+  output$spec_select <- renderPlotly({
+    event.data <- event_data("plotly_click", source = "g_select")
+    
+    # If NULL dont do anything
+    #if(is.null(event.data) == T) return(NULL)
+    validate(
+      need(is.null(event.data) == F, "Click on the Heatmap") %then%
+        need(event.data$y %in% input$acc_list, "Click on the Heatmap")
+    )
+   
+    select_gfam <- event.data$y
+    
+    full_full <- full_file_feature()
+    full_select <- data.frame(subset(full_full, Feature %in% select_gfam))
+    
+    go_nums <- full_select[,4:ncol(full_select)]
+    go_reorder <- go_nums[,unlist(grouped_samps())]
+    
+    RA <- unlist(go_reorder)
+    
+    samp_order <- factor(colnames(go_reorder), 
+                         levels = c(colnames(go_reorder)))
+    Sample_id <- rep(samp_order, each = nrow(go_reorder))
+    
+    Taxa <- rep(full_select$Taxa, ncol(go_reorder))
+    
+    
+    ## groups
+    groupings = new_group_names()
+    grouping_nums = group_dims()
+    bin <- c()
+    for (i in 1:length(groupings)){
+      use <- rep(groupings[i], grouping_nums[i])
+      bin <- c(bin, use)
+    }
+    Group = rep(bin, each = nrow(go_reorder))
+    ###
+    #print(length(Group))
+    #print(length(Sample_id))
+    #print(length(Taxa))
+    #print(length(RA))
+    plotter <- data.frame(Sample_id, Taxa, Group, RA)
+    
+    #### filter to speed up plotting!!!!
+    plotter2 <- aggregate(plotter$RA, list(plotter$Taxa), sum)
+    
+    summer <- sum(plotter2[,2])
+    plotter2$prop <- plotter2[,2]/summer
+    plotter3 <- subset(plotter2, 
+                       prop <= quantile(plotter2$prop, input$taxa_limit[2]))
+    plotter4 <- subset(plotter3, 
+                       prop > quantile(plotter3$prop, input$taxa_limit[1]))
+    
+    keep_taxa <- as.character(unlist(plotter4[,1]))
+    plotter2 <- subset(plotter, Taxa %in% keep_taxa)
+    
+    ####
+    plotter <- plotter2
+    
+    bug_sorter <- plotter[order(plotter$RA, decreasing = T),]
+    bug_sort <- as.character(unique(bug_sorter$Taxa))
+    plotter$Taxa <- factor(plotter$Taxa, levels = bug_sort)
+    
+    tax_sel <- ggplot(plotter, aes(x=Sample_id, y = RA, fill = Taxa, text = Group)) + 
+      stat_summary(fun.y = "mean", geom = "bar", position = "fill") +
+      scale_fill_manual(values = randomColor(length(unique(plotter$Taxa))),
+                        na.value = "grey") +
+      #ggtitle(select_gfam) + 
+      xlab("Sample") + ylab("Relative Abundance") +
+      theme(legend.position='none',
+            panel.background = element_blank(),
+            axis.text.x = element_blank())
+    
+    taxly <- ggplotly(tax_sel, tooltip = c('fill', 'text'))
+    
+    
+    p3 <- subplot(colorer(), taxly,
+                  nrows = 2, margin = c(0,0,-0.01,0),
+                  heights = c(0.1, 0.9), shareX = T)
+    p3
+  })
+  
+  output$curr_select_search <- renderText({
+    event.data <- event_data("plotly_click", source = "g_select")
+    select_gfam <- event.data$y
+    message <- paste0("Current Selection from Plot: ", select_gfam)
+    message
+  })
+  
+  output$curr_select_exp <- renderText({
+    event.data <- event_data("plotly_click", source = "g_exp")
+    select_gfam <- event.data$y
+    message <- paste0("Current Selection from Plot: ", select_gfam)
+    message
+  })
+  
+  output$curr_taxa_exp <- renderText({
+    event.data <- event_data("plotly_click", source = "t_exp")
+    select_taxa <- event.data$y
+    message <- paste0("Current Selection from Plot: ", select_taxa)
+    message
   })
   
   
   
+  #### select anova and post hoc results
+  
+  output$select_stat_heat <- renderPlot({
+    event.data <- event_data("plotly_click", source = "g_select")
+    
+    # If NULL dont do anything
+    #if(is.null(event.data) == T) return(NULL)
+    validate(
+      need(is.null(event.data) == F, "Click on the Heatmap") %then%
+        need(event.data$y %in% input$acc_list, "Click on the Heatmap")
+    )
+    
+    select_gfam <- event.data$y
+    
+    feat_order <- reorder_mat()
+    feat_order2 <- subset(feat_order, rownames(feat_order) %in% select_gfam)
+    
+    groupings = new_group_names()
+    grouping_nums = group_dims()
+    
+    
+    
+    RA <- unlist(feat_order2)
+    sample_id <- rep(colnames(feat_order2), each = nrow(feat_order2))
+    
+    group_titles = c()
+    for (i in 1:length(groupings)) {
+      title = groupings[i]
+      reps = grouping_nums[i]
+      title_rep = rep(title, reps)
+      group_titles = c(group_titles, title_rep)
+    }
+    
+    group_titles2 = rep(group_titles, each = nrow(feat_order2))
+    
+    Feature <- rep(rownames(feat_order2), ncol(feat_order2))
+    
+    stat_df <- data.frame(Sample = sample_id, Group = group_titles2, 
+                          RA = RA, Feature = Feature)
+    
+    #a_test <- anova(lm(RA_clr ~ Group + Taxa, stat_df))
+    hoc_results <- data.frame(Feat = NA, Int = NA, p_adj = NA)
+    a_test <- anova(lm(RA ~ Group, stat_df))
+    result <- data.frame(Feature = select_gfam,
+                         F_val = a_test$`F value`[1],
+                         P_val = a_test$`Pr(>F)`[1])
+    validate(
+      need(result$P_val < 0.05, "This feature was not significant at the set threshold")
+    )
+    
+    h_test <- aov(RA ~ Group, stat_df)
+    tk <- TukeyHSD(h_test, "Group")
+    hresult <- data.frame(Feat = rep(select_gfam, ncol(combn(length(unique(stat_df$Group)), 2))),
+                          Int = rownames(tk$Group),
+                          p_adj = tk$Group[,4])
+    hoc_results <- hresult
+    
+    hoc_results
+
+    group_num <- length(groupings)
+    group1 <- gsub('.*-', "", hoc_results$Int[1])
+    group_rest <- gsub("-.*", "", hoc_results$Int[1:(group_num-1)])
+    group_names <- c(group1, group_rest)
+    
+    resm <- matrix(NA, group_num, group_num)
+    resm[lower.tri(resm) ] <-round(hoc_results$p_adj, 4)
+    resm <- t(resm)
+    resm[lower.tri(resm) ] <-round(hoc_results$p_adj, 4)
+    rownames(resm) <- group_names
+    colnames(resm) <- group_names
+    print(resm)
+    resm
+    
+    resm_lab <- resm
+    resm_lab[resm_lab < 0.0001] <- "<0.0001"
+    
+    
+    if (any(resm<0.05, na.rm = T)){
+      breaker = seq(0, 0.05, by = 0.0005)
+      coler = c(colorRampPalette(c("red", "white"))(n=100))
+    } else {
+      breaker <- seq(0, 1, by = 0.01)
+      coler <- c(colorRampPalette(c("white"))(n=100))
+    }
+    
+    if (input$numInputs == 2){
+      resm[1,2] = resm[1,2] + 0.0000001
+    }
+    
+    par(cex.main=0.8)
+    heatmap.3(data.matrix(resm),
+              cellnote = resm_lab,
+              notecol="black",
+              #main=new_name,
+              #key = TRUE,
+              #keysize = 1.0,
+              key.title = NULL,
+              breaks = breaker,
+              col = coler,
+              #breaks = seq(0, 0.05, by = 0.0005),
+              #col=c(colorRampPalette(c("red", "white"))(n=100)),
+              dendrogram = 'none',
+              Rowv=F,
+              Colv=F,
+              margins=c(10,10),
+              cexRow=1.2,
+              cexCol=1.2#,
+              #na.color="gray60"
+    )
+    title(select_gfam, line= -2.5)
+  })
+  
+  
+  observe({
+    output$select_feat_stat_ui <- renderUI({
+      plotOutput("select_stat_heat")
+    })
+  })
   
   # gene_explore_plot = reactive({
   #   if (input$testme) {
@@ -1611,161 +1903,161 @@ server <- function(input, output, session) {
   # 
   # # Gene Search Plot
   # Gene search dataframe for plot
-  exp_plot <- reactive({
-    if (input$testme) {
-      validate(
-        need(length(group_dims())==4, "Please visit the group tab to verify group assignment")
-      )
-    }
-    else {
-      validate(
-        need(input$file1, "Please provide a file in the Upload Tab") %then%
-          need(unlist(reorder_mat()), "Please select samples in the Group Tab")
-      )
-    }
-    validate(
-      need(input$acc_list, 'Select at least one Gene Family!')
-    )
-
-    orig_df = acc_full()
-    #"Acc", "Gene.Family", "SpeciesNumber", "Species"
-    plot_df = reorder_mat()
-    plot_df$Feature = paste(" ", orig_df$Feature, " ", sep="")
-
-    gfam_list = input$acc_list
-    #heyo = plot_df[grep(paste(gfam_list, collapse="|"), acc_select()), ]
-
-    heyo = subset(plot_df, Feature %in% gfam_list)
-    
-    #print(gfam_list)
-    #print(acc_select()[1:5])
-    
-    col = (ncol(heyo))-1
-    row = nrow(heyo)
-
-    RelExp = data.frame(heyo[1:(col)])
-    RelExp2 = t(RelExp)
-    df_RelExp = data.frame(RelExp2)
-
-    datas = c()
-    for (i in 1:row){
-      data=as.vector(t(df_RelExp[i]))
-      datas = c(datas,data)
-    }
-
-    groupings = new_group_names()
-    grouping_nums = group_dims()
-
-    group_titles = c()
-    for (i in 1:length(groupings)) {
-      title = groupings[i]
-      reps = grouping_nums[i]
-      title_rep = rep(title, reps)
-      group_titles = c(group_titles, title_rep)
-    }
-
-    group_titles2 = rep(group_titles, row)
-
-    gfams = as.vector(t(heyo[1 + col]))
-    Gfam = rep(gfams, each = col)
-    sample_num = paste(1:(col))
-    samp=strtoi(sample_num)
-    isamp = rep(samp,row)
-    g_data = data.frame(datas, Gfam, isamp, group_titles2)
-    colnames(g_data) = c("Exp", "Gfam", "Sample_num", "groups")
-    #g_data without zeros
-
-
-    g_data2 = subset(g_data, select=c(Exp,Gfam,Sample_num, groups))
-    g_data2
-  })
-
-  # Gene search plot object
-  expression_plot <- reactive({
-    g_data2 = data.frame(exp_plot())
-    class(g_data2$Exp) = "numeric"
-
-    g_data2$Gfam2 <- gsub(" ", "", g_data2$Gfam)
-    #g_data2$Gfam2 <- str_trunc(g_data2$Gfam2, 30, "center")
-
-    g_data2$group_gfam <- paste(g_data2$group, g_data2$Gfam2, sep=":")
-
-    # necessary to keep boxplot boxes at correct width, psuedo data at 1,000,000
-    combos <- unique(g_data2$group_gfam)
-    g_data_new <- data.frame()
-    for (i in 1:length(combos)){
-      checker <- subset(g_data2, group_gfam == combos[i])
-      if (sum(checker$Exp) > 0){
-        new_df <- checker
-      } else {
-        new_df <- checker[1,]
-        new_df$Exp = 1000000
-      }
-      g_data_new <- rbind(g_data_new, new_df)
-    }
-    colnames(g_data_new) = colnames(g_data2)
-
-    g_data_new <- subset(g_data_new, Exp > 0)
-    glogs <- g_data_new$Exp[g_data_new$Exp < 1000000]
-    gmax <- max(glogs)
-    gmin <- min(glogs)
-
-    if (input$xy_switch){
-      plot_exp = ggplot(g_data_new, aes(x = Gfam2, y = Exp, fill = groups)) +
-        geom_boxplot(outlier.shape=3) +
-        ggtitle("Logarthimic Gene Abundance") +
-        coord_cartesian(ylim = c(gmin, gmax)) +
-        scale_y_log10() +
-        xlab("Gene Family") +
-        ylab("Log Relative Abundance") +
-        guides(color=FALSE, fill = guide_legend(title = "Group")) +
-        theme(legend.position = 'none',
-          #axis.text.x = element_blank(),
-          #plot.margin = unit(c(.1, .1, .1, .1), "cm"),
-          plot.title = element_text(hjust = 0, size = 22),
-          axis.title.y = element_text(size = 22),
-          axis.title.x = element_text(size = 18),
-          axis.text.y = element_text(size = 22),
-          axis.text.x = element_text(size = 18,
-                                     angle = 20+5*(length(unique(g_data_new$Gfam2))),
-                                     hjust=1),
-          legend.title = element_text(size = 22),
-          legend.text = element_text(size = 18))
-      plot_exp
-    } else {
-      plot_exp = ggplot(g_data_new, aes(x = groups, y = Exp)) +
-        geom_boxplot(outlier.shape=3, aes(fill = Gfam2)) +
-        geom_point(position=position_dodge(width=0.75), 
-                   aes(group=Gfam2),
-                   color = "grey20") +
-        ggtitle("Logarthimic Gene Abundance") +
-        coord_cartesian(ylim = c(gmin, gmax)) +
-        scale_y_log10() +
-        xlab("Groups") +
-        ylab("Log Relative Abundance") +
-        guides(color=TRUE, fill = guide_legend(title = "Feature",
-                                                ncol = 2)) +
-        scale_fill_manual(values = randomColor(length(unique(g_data_new$Gfam2)))) +
-        theme(legend.position = 'bottom',
-              #panel.background = element_blank(),
-              #panel.grid.minor = theme_blank(), 
-              #panel.grid.major = theme_blank(),
-              #plot.background = element_rect(fill = "transparent",colour = NA),
-              #axis.text.x = element_blank(),
-              plot.margin = unit(c(1, 1, 1, 1), "cm"),
-              plot.title = element_text(hjust = 0, size = 22),
-              axis.title.y = element_text(size = 22),
-              axis.title.x = element_text(size = 22),
-              axis.text = element_text(size =22, color = 'black'),
-              legend.title = element_text(size = 22),
-              legend.text = element_text(size = 12))
-      plot_exp
-    }
-  })
-
-  output$plot1 <- renderPlot({
-    expression_plot()
-  })
+  # exp_plot <- reactive({
+  #   if (input$testme) {
+  #     validate(
+  #       need(length(group_dims())==4, "Please visit the group tab to verify group assignment")
+  #     )
+  #   }
+  #   else {
+  #     validate(
+  #       need(input$file1, "Please provide a file in the Upload Tab") %then%
+  #         need(unlist(reorder_mat()), "Please select samples in the Group Tab")
+  #     )
+  #   }
+  #   validate(
+  #     need(input$acc_list, 'Select at least one Gene Family!')
+  #   )
+  # 
+  #   orig_df = acc_full()
+  #   #"Acc", "Gene.Family", "SpeciesNumber", "Species"
+  #   plot_df = reorder_mat()
+  #   plot_df$Feature = paste(" ", orig_df$Feature, " ", sep="")
+  # 
+  #   gfam_list = input$acc_list
+  #   #heyo = plot_df[grep(paste(gfam_list, collapse="|"), acc_select()), ]
+  # 
+  #   heyo = subset(plot_df, Feature %in% gfam_list)
+  #   
+  #   #print(gfam_list)
+  #   #print(acc_select()[1:5])
+  #   
+  #   col = (ncol(heyo))-1
+  #   row = nrow(heyo)
+  # 
+  #   RelExp = data.frame(heyo[1:(col)])
+  #   RelExp2 = t(RelExp)
+  #   df_RelExp = data.frame(RelExp2)
+  # 
+  #   datas = c()
+  #   for (i in 1:row){
+  #     data=as.vector(t(df_RelExp[i]))
+  #     datas = c(datas,data)
+  #   }
+  # 
+  #   groupings = new_group_names()
+  #   grouping_nums = group_dims()
+  # 
+  #   group_titles = c()
+  #   for (i in 1:length(groupings)) {
+  #     title = groupings[i]
+  #     reps = grouping_nums[i]
+  #     title_rep = rep(title, reps)
+  #     group_titles = c(group_titles, title_rep)
+  #   }
+  # 
+  #   group_titles2 = rep(group_titles, row)
+  # 
+  #   gfams = as.vector(t(heyo[1 + col]))
+  #   Gfam = rep(gfams, each = col)
+  #   sample_num = paste(1:(col))
+  #   samp=strtoi(sample_num)
+  #   isamp = rep(samp,row)
+  #   g_data = data.frame(datas, Gfam, isamp, group_titles2)
+  #   colnames(g_data) = c("Exp", "Gfam", "Sample_num", "groups")
+  #   #g_data without zeros
+  # 
+  # 
+  #   g_data2 = subset(g_data, select=c(Exp,Gfam,Sample_num, groups))
+  #   g_data2
+  # })
+  # 
+  # # Gene search plot object
+  # expression_plot <- reactive({
+  #   g_data2 = data.frame(exp_plot())
+  #   class(g_data2$Exp) = "numeric"
+  # 
+  #   g_data2$Gfam2 <- gsub(" ", "", g_data2$Gfam)
+  #   #g_data2$Gfam2 <- str_trunc(g_data2$Gfam2, 30, "center")
+  # 
+  #   g_data2$group_gfam <- paste(g_data2$group, g_data2$Gfam2, sep=":")
+  # 
+  #   # necessary to keep boxplot boxes at correct width, psuedo data at 1,000,000
+  #   combos <- unique(g_data2$group_gfam)
+  #   g_data_new <- data.frame()
+  #   for (i in 1:length(combos)){
+  #     checker <- subset(g_data2, group_gfam == combos[i])
+  #     if (sum(checker$Exp) > 0){
+  #       new_df <- checker
+  #     } else {
+  #       new_df <- checker[1,]
+  #       new_df$Exp = 1000000
+  #     }
+  #     g_data_new <- rbind(g_data_new, new_df)
+  #   }
+  #   colnames(g_data_new) = colnames(g_data2)
+  # 
+  #   g_data_new <- subset(g_data_new, Exp > 0)
+  #   glogs <- g_data_new$Exp[g_data_new$Exp < 1000000]
+  #   gmax <- max(glogs)
+  #   gmin <- min(glogs)
+  # 
+  #   if (input$xy_switch){
+  #     plot_exp = ggplot(g_data_new, aes(x = Gfam2, y = Exp, fill = groups)) +
+  #       geom_boxplot(outlier.shape=3) +
+  #       ggtitle("Logarthimic Gene Abundance") +
+  #       coord_cartesian(ylim = c(gmin, gmax)) +
+  #       scale_y_log10() +
+  #       xlab("Gene Family") +
+  #       ylab("Log Relative Abundance") +
+  #       guides(color=FALSE, fill = guide_legend(title = "Group")) +
+  #       theme(legend.position = 'none',
+  #         #axis.text.x = element_blank(),
+  #         #plot.margin = unit(c(.1, .1, .1, .1), "cm"),
+  #         plot.title = element_text(hjust = 0, size = 22),
+  #         axis.title.y = element_text(size = 22),
+  #         axis.title.x = element_text(size = 18),
+  #         axis.text.y = element_text(size = 22),
+  #         axis.text.x = element_text(size = 18,
+  #                                    angle = 20+5*(length(unique(g_data_new$Gfam2))),
+  #                                    hjust=1),
+  #         legend.title = element_text(size = 22),
+  #         legend.text = element_text(size = 18))
+  #     plot_exp
+  #   } else {
+  #     plot_exp = ggplot(g_data_new, aes(x = groups, y = Exp)) +
+  #       geom_boxplot(outlier.shape=3, aes(fill = Gfam2)) +
+  #       geom_point(position=position_dodge(width=0.75), 
+  #                  aes(group=Gfam2),
+  #                  color = "grey20") +
+  #       ggtitle("Logarthimic Gene Abundance") +
+  #       coord_cartesian(ylim = c(gmin, gmax)) +
+  #       scale_y_log10() +
+  #       xlab("Groups") +
+  #       ylab("Log Relative Abundance") +
+  #       guides(color=TRUE, fill = guide_legend(title = "Feature",
+  #                                               ncol = 1)) +
+  #       scale_fill_manual(values = randomColor(length(unique(g_data_new$Gfam2)))) +
+  #       theme(legend.position = 'bottom',
+  #             #panel.background = element_blank(),
+  #             #panel.grid.minor = theme_blank(), 
+  #             #panel.grid.major = theme_blank(),
+  #             #plot.background = element_rect(fill = "transparent",colour = NA),
+  #             #axis.text.x = element_blank(),
+  #             plot.margin = unit(c(1, 1, 1, 1), "cm"),
+  #             plot.title = element_text(hjust = 0, size = 22),
+  #             axis.title.y = element_text(size = 22),
+  #             axis.title.x = element_text(size = 22),
+  #             axis.text = element_text(size =22, color = 'black'),
+  #             legend.title = element_text(size = 22),
+  #             legend.text = element_text(size = 12))
+  #     plot_exp
+  #   }
+  # })
+  # 
+  # output$plot1 <- renderPlot({
+  #   expression_plot()
+  # })
 
   output$expression_download <- downloadHandler(
     filename = function() { paste("gene_family_abundance", '.png', sep='') },
@@ -1775,227 +2067,154 @@ server <- function(input, output, session) {
     }
   )
   
-  
-  ##### new spec select plot
-  
-  output$spec_select <- renderPlotly({
-    event.data <- input$plot_click
-    
-    g_data2 = data.frame(exp_plot())
-    
-    finder <- nearPoints(g_data2, xvar="groups", yvar = "Exp",
-                         input$plot_click, threshold = 50, maxpoints = 1)
-    
-    # If NULL dont do anything
-    if(is.null(event.data) == T) return(NULL)
-    
-    select_gfam <- as.character(unique(unlist(finder$Gfam)))
-    print(select_gfam)
 
-    full_full <- full_file_feature()
-    full_full$Feature <- paste0(" ", full_full$Feature, " ")
-    full_select <- data.frame(subset(full_full, Feature %in% select_gfam))
-    
-
-    go_nums <- full_select[,4:ncol(full_select)]
-    go_reorder <- go_nums[,unlist(grouped_samps())]
-    
-    RA <- unlist(go_reorder)
-    
-    samp_order <- factor(colnames(go_reorder), 
-                         levels = c(colnames(go_reorder)))
-    Sample_id <- rep(samp_order, each = nrow(go_reorder))
-    
-    Taxa <- rep(full_select$Taxa, ncol(go_reorder))
-    
-    
-    ## groups
-    groupings = new_group_names()
-    grouping_nums = group_dims()
-    bin <- c()
-    for (i in 1:length(groupings)){
-      use <- rep(groupings[i], grouping_nums[i])
-      bin <- c(bin, use)
-    }
-    Group = rep(bin, each = nrow(go_reorder))
-    ###
-    #print(length(Group))
-    #print(length(Sample_id))
-    #print(length(Taxa))
-    #print(length(RA))
-    plotter <- data.frame(Sample_id, Taxa, Group, RA)
-    
-    bug_sorter <- plotter[order(plotter$RA, decreasing = T),]
-    bug_sort <- as.character(unique(bug_sorter$Taxa))
-    plotter$Taxa <- factor(plotter$Taxa, levels = bug_sort)
-    
-    tax_sel <- ggplot(plotter, aes(x=Sample_id, y = RA, fill = Taxa, text = Group)) + 
-      stat_summary(fun.y = "mean", geom = "bar", position = "fill") +
-      scale_fill_manual(values = randomColor(length(unique(plotter$Taxa))),
-                        na.value = "grey") +
-      ggtitle(select_gfam) + xlab("Sample") + ylab("Relative Abundance") +
-      theme(legend.position='none',
-            panel.background = element_blank(),
-            axis.text.x = element_blank())
-    
-    taxly <- ggplotly(tax_sel, tooltip = c('fill', 'text'))
-    
-    p3 <- subplot(colorer(), taxly,
-                  nrows = 2, margin = c(0,0,-0.01,0),
-                  heights = c(0.1, 0.9), shareX = T)
-    p3
-    
-    
-  })
-
-  
 
   # Significance Table for Gene search t-tests
   #
   #change text annoations to "<0.0001"
-  expression_table <- reactive({
-    g_data2 = data.frame(exp_plot())
-    g_data2 = g_data2[order(g_data2$groups),]
-    
-    Gfam_uniq = unique(g_data2$Gfam)
-    group_uniq = as.character(unique(g_data2$groups))
-    if (length(group_uniq) > 1) {
-      hio=c()
-      for (i in Gfam_uniq){
-        #acc_split = g_data2[grep(i, g_data2$Gfam),]
-        acc_split <- subset(g_data2, Gfam == i)
-        acc_split[c("Exp")][is.na(acc_split[c("Exp")])] <- 0
-        hi = pairwise.t.test(acc_split$Exp, acc_split$groups, p.adjust = 'BH')
-        hiP <- hi$p.value
-        nas <- rep(NA, length(group_uniq))
-        hiP <- rbind(nas[-1], hiP)
-        hiP <- cbind(hiP, nas)
-        hiP[upper.tri(hiP)] = t(hiP)[upper.tri(hiP)]
-        hiP <- round(hiP, 4)
-        hiP[hiP < 0.0001] <- "<0.0001"
-        hiP <- data.frame(hiP)
-        hio = rbind.fill(hio, hiP)
-      }
-      hi3 = data.frame(rep(Gfam_uniq, each = length(group_uniq)))
-      colnames(hi3) = "Gfam"
-      hi3$group_comparisons = c(rep(group_uniq, length(Gfam_uniq)))
-      hi3 = cbind.fill(hi3, hio)
-      colnames(hi3) <- c("Gfam", "Group Comparison", group_uniq)
-    }
-    else if (length(group_uniq)==1){
-      hi3 <- data.frame(Seletion=1:length(Gfam_uniq), Gene_Family=Gfam_uniq)
-      hi3
-    }
-    hi3
-  })
-
-  #actual numbers for correct heat map colors
-  expression_table_orig <- reactive({
-    g_data2 = data.frame(exp_plot())
-    g_data2 = g_data2[order(g_data2$groups),]
-
-    Gfam_uniq = unique(g_data2$Gfam)
-    group_uniq = as.character(unique(g_data2$groups))
-    if (length(group_uniq) > 1) {
-      hio=c()
-      for (i in Gfam_uniq){
-        #acc_split = g_data2[grep(i, g_data2$Gfam),]
-        acc_split <- subset(g_data2, Gfam == i)
-        acc_split[c("Exp")][is.na(acc_split[c("Exp")])] <- 0
-        hi = pairwise.t.test(acc_split$Exp, acc_split$groups, p.adjust = 'BH')
-        hiP <- hi$p.value
-        nas <- rep(NA, length(group_uniq))
-        hiP <- rbind(nas[-1], hiP)
-        hiP <- cbind(hiP, nas)
-        hiP[upper.tri(hiP)] = t(hiP)[upper.tri(hiP)]
-        hiP <- round(hiP, 5)
-        hiP <- data.frame(hiP)
-        hio = rbind.fill(hio, hiP)
-      }
-      hi3 = data.frame(rep(Gfam_uniq, each = length(group_uniq)))
-      colnames(hi3) = "Gfam"
-      hi3$group_comparisons = c(rep(group_uniq, length(Gfam_uniq)))
-      hi3 = cbind.fill(hi3, hio)
-      colnames(hi3) <- c("Gfam", "Group Comparison", group_uniq)
-    }
-    else if (length(group_uniq)==1){
-      hi3 <- data.frame(Seletion=1:length(Gfam_uniq), Gene_Family=Gfam_uniq)
-      hi3
-    }
-    hi3
-  })
-
-  output$exp_table = renderTable({
-    expression_table()
-  })
-
-  output$expression_table_download <- downloadHandler(
-    filename = function() { paste("gene_family_abundance_table", '.txt', sep='') },
-    content = function(file) {
-      exp = expression_table()
-      exp2 = data.frame(exp)
-      write.table(exp2, file, row.names = FALSE, sep = '\t', quote = FALSE)
-    }
-  )
-
-  output$exp_heat <- renderUI({
-    g_data2 = data.frame(exp_plot())
-    g_data2 = g_data2[order(g_data2$groups),]
-
-    Gfam_uniq = unique(g_data2$Gfam)
-    group_uniq = as.character(unique(g_data2$groups))
-    exp_table <- expression_table_orig()
-    exp_labs <- expression_table()
-    if (length(group_uniq) > 1) {
-      get_exp_heat_list(max_plots, length(Gfam_uniq), exp_table, exp_labs)
-    }
-  })
-
-  output$exp_heat_download <- renderUI({
-    g_data2 = data.frame(exp_plot())
-    g_data2 = g_data2[order(g_data2$groups),]
-
-    Gfam_uniq = unique(g_data2$Gfam)
-    group_uniq = as.character(unique(g_data2$groups))
-    if (length(group_uniq) > 1) {
-      lapply(1:length(Gfam_uniq), function(i) {
-        display_name = Gfam_uniq
-        downloadButton(paste0("downloadExp", i), paste("Download", display_name[i], sep=" "))
-      })
-    }
-  })
-
-  #download gene search t-test heat maps with variable width according to Gene name
-  observe({
-    g_data2 = data.frame(exp_plot())
-    g_data2 = g_data2[order(g_data2$groups),]
-
-    Gfam_uniq = unique(g_data2$Gfam)
-    group_uniq = as.character(unique(g_data2$groups))
-
-
-    lapply(1:length(Gfam_uniq), function(i) {
-      if (nchar(as.character(Gfam_uniq[i])) > 30){
-        fixed_width <- 0.4*nchar(as.character(Gfam_uniq[i]))
-      } else {fixed_width <- 15}
-
-      if (nchar(as.character(Gfam_uniq[i])) > 30){
-        fixed_height <- 0.35*nchar(as.character(Gfam_uniq[i]))
-      } else {fixed_height <- 15}
-
-      output[[paste0("downloadExp", i)]] <- downloadHandler(
-        filename = function() { paste(Gfam_uniq[i], "_p_value_heat", '.png', sep='') },
-        content = function(file) {
-          png(file, width = fixed_width,
-              height = fixed_height, units ='cm', res = 300)
-          exp_table <- expression_table_orig()
-          exp_labs <- expression_table()
-          download_exp_heat_list(max_plots, i, exp_table, exp_labs)
-          dev.off()
-        }
-      )
-    })
-  })
+  # expression_table <- reactive({
+  #   g_data2 = data.frame(exp_plot())
+  #   g_data2 = g_data2[order(g_data2$groups),]
+  #   
+  #   Gfam_uniq = unique(g_data2$Gfam)
+  #   group_uniq = as.character(unique(g_data2$groups))
+  #   if (length(group_uniq) > 1) {
+  #     hio=c()
+  #     for (i in Gfam_uniq){
+  #       #acc_split = g_data2[grep(i, g_data2$Gfam),]
+  #       acc_split <- subset(g_data2, Gfam == i)
+  #       acc_split[c("Exp")][is.na(acc_split[c("Exp")])] <- 0
+  #       hi = pairwise.t.test(acc_split$Exp, acc_split$groups, p.adjust = 'BH')
+  #       hiP <- hi$p.value
+  #       nas <- rep(NA, length(group_uniq))
+  #       hiP <- rbind(nas[-1], hiP)
+  #       hiP <- cbind(hiP, nas)
+  #       hiP[upper.tri(hiP)] = t(hiP)[upper.tri(hiP)]
+  #       hiP <- round(hiP, 4)
+  #       hiP[hiP < 0.0001] <- "<0.0001"
+  #       hiP <- data.frame(hiP)
+  #       hio = rbind.fill(hio, hiP)
+  #     }
+  #     hi3 = data.frame(rep(Gfam_uniq, each = length(group_uniq)))
+  #     colnames(hi3) = "Gfam"
+  #     hi3$group_comparisons = c(rep(group_uniq, length(Gfam_uniq)))
+  #     hi3 = cbind.fill(hi3, hio)
+  #     colnames(hi3) <- c("Gfam", "Group Comparison", group_uniq)
+  #   }
+  #   else if (length(group_uniq)==1){
+  #     hi3 <- data.frame(Seletion=1:length(Gfam_uniq), Gene_Family=Gfam_uniq)
+  #     hi3
+  #   }
+  #   hi3
+  # })
+  # 
+  # #actual numbers for correct heat map colors
+  # expression_table_orig <- reactive({
+  #   g_data2 = data.frame(exp_plot())
+  #   g_data2 = g_data2[order(g_data2$groups),]
+  # 
+  #   Gfam_uniq = unique(g_data2$Gfam)
+  #   group_uniq = as.character(unique(g_data2$groups))
+  #   if (length(group_uniq) > 1) {
+  #     hio=c()
+  #     for (i in Gfam_uniq){
+  #       #acc_split = g_data2[grep(i, g_data2$Gfam),]
+  #       acc_split <- subset(g_data2, Gfam == i)
+  #       acc_split[c("Exp")][is.na(acc_split[c("Exp")])] <- 0
+  #       hi = pairwise.t.test(acc_split$Exp, acc_split$groups, p.adjust = 'BH')
+  #       hiP <- hi$p.value
+  #       nas <- rep(NA, length(group_uniq))
+  #       hiP <- rbind(nas[-1], hiP)
+  #       hiP <- cbind(hiP, nas)
+  #       hiP[upper.tri(hiP)] = t(hiP)[upper.tri(hiP)]
+  #       hiP <- round(hiP, 5)
+  #       hiP <- data.frame(hiP)
+  #       hio = rbind.fill(hio, hiP)
+  #     }
+  #     hi3 = data.frame(rep(Gfam_uniq, each = length(group_uniq)))
+  #     colnames(hi3) = "Gfam"
+  #     hi3$group_comparisons = c(rep(group_uniq, length(Gfam_uniq)))
+  #     hi3 = cbind.fill(hi3, hio)
+  #     colnames(hi3) <- c("Gfam", "Group Comparison", group_uniq)
+  #   }
+  #   else if (length(group_uniq)==1){
+  #     hi3 <- data.frame(Seletion=1:length(Gfam_uniq), Gene_Family=Gfam_uniq)
+  #     hi3
+  #   }
+  #   hi3
+  # })
+  # 
+  # output$exp_table = renderTable({
+  #   expression_table()
+  # })
+  # 
+  # output$expression_table_download <- downloadHandler(
+  #   filename = function() { paste("gene_family_abundance_table", '.txt', sep='') },
+  #   content = function(file) {
+  #     exp = expression_table()
+  #     exp2 = data.frame(exp)
+  #     write.table(exp2, file, row.names = FALSE, sep = '\t', quote = FALSE)
+  #   }
+  # )
+  # 
+  # output$exp_heat <- renderUI({
+  #   g_data2 = data.frame(exp_plot())
+  #   g_data2 = g_data2[order(g_data2$groups),]
+  # 
+  #   Gfam_uniq = unique(g_data2$Gfam)
+  #   group_uniq = as.character(unique(g_data2$groups))
+  #   exp_table <- expression_table_orig()
+  #   exp_labs <- expression_table()
+  #   if (length(group_uniq) > 1) {
+  #     get_exp_heat_list(max_plots, length(Gfam_uniq), exp_table, exp_labs)
+  #   }
+  # })
+  # 
+  # output$exp_heat_download <- renderUI({
+  #   g_data2 = data.frame(exp_plot())
+  #   g_data2 = g_data2[order(g_data2$groups),]
+  # 
+  #   Gfam_uniq = unique(g_data2$Gfam)
+  #   group_uniq = as.character(unique(g_data2$groups))
+  #   if (length(group_uniq) > 1) {
+  #     lapply(1:length(Gfam_uniq), function(i) {
+  #       display_name = Gfam_uniq
+  #       downloadButton(paste0("downloadExp", i), paste("Download", display_name[i], sep=" "))
+  #     })
+  #   }
+  # })
+  # 
+  # #download gene search t-test heat maps with variable width according to Gene name
+  # observe({
+  #   g_data2 = data.frame(exp_plot())
+  #   g_data2 = g_data2[order(g_data2$groups),]
+  # 
+  #   Gfam_uniq = unique(g_data2$Gfam)
+  #   group_uniq = as.character(unique(g_data2$groups))
+  # 
+  # 
+  #   lapply(1:length(Gfam_uniq), function(i) {
+  #     if (nchar(as.character(Gfam_uniq[i])) > 30){
+  #       fixed_width <- 0.4*nchar(as.character(Gfam_uniq[i]))
+  #     } else {fixed_width <- 15}
+  # 
+  #     if (nchar(as.character(Gfam_uniq[i])) > 30){
+  #       fixed_height <- 0.35*nchar(as.character(Gfam_uniq[i]))
+  #     } else {fixed_height <- 15}
+  # 
+  #     output[[paste0("downloadExp", i)]] <- downloadHandler(
+  #       filename = function() { paste(Gfam_uniq[i], "_p_value_heat", '.png', sep='') },
+  #       content = function(file) {
+  #         png(file, width = fixed_width,
+  #             height = fixed_height, units ='cm', res = 300)
+  #         exp_table <- expression_table_orig()
+  #         exp_labs <- expression_table()
+  #         download_exp_heat_list(max_plots, i, exp_table, exp_labs)
+  #         dev.off()
+  #       }
+  #     )
+  #   })
+  # })
    
   ## Plots for Taxa! ##
   
@@ -2138,8 +2357,10 @@ server <- function(input, output, session) {
       
       summer <- sum(spec_g_data2[,2])
       spec_g_data2$prop <- spec_g_data2[,2]/summer
-      spec_g_data3 <- subset(spec_g_data2, prop < input$upper_limit)
-      spec_g_data4 <- subset(spec_g_data3, prop > input$lower_limit)
+      spec_g_data3 <- subset(spec_g_data2, 
+                             prop <= quantile(spec_g_data2$prop, input$taxa_limit[2]))
+      spec_g_data4 <- subset(spec_g_data3, 
+                             prop > quantile(spec_g_data2$prop, input$taxa_limit[1]))
       
       keep_taxa <- as.character(unlist(spec_g_data4[,1]))
       spec_g_data_filt <- subset(spec_g_data, Taxa %in% keep_taxa)
@@ -2215,15 +2436,15 @@ server <- function(input, output, session) {
   observe({
     if (input$input_type == "Biobakery"){
       output$taxa_selectors <- renderUI({
-      sliderInput("taxa_pval_up", "Adjusted P Value", min = 0, max = 1,
+      sliderInput("taxa_pval_up", "Adjusted P Value", min = 0, max = 0.1,
                    step = 0.01, value = 0.05, width = '35%')
       })
       output$feat_selectors <- renderUI({
         fluidRow(
-          column(3, sliderInput("feat_pval_up", "Adjusted P Value", 
-                                 min = 0, max = 1,
+          column(4, sliderInput("feat_pval_up", "Adjusted P Value", 
+                                 min = 0, max = 0.1,
                                  step = 0.01, value = 0.05)),
-          column(3, sliderInput("var_select", "Variance Filter",
+          column(4, sliderInput("var_select", "Variance Filter",
                                 min = 0, max = 1,
                                 value = 0.75))
         )
@@ -2235,7 +2456,7 @@ server <- function(input, output, session) {
                         numericInput("taxa_FC_up", "Fold Change Level", min = 0, max = 10,
                                      step = 0.5, value = 1.5)),
                  column(3, 
-                        numericInput("taxa_pval_up", "Adjusted P Value", min = 0, max = 1,
+                        numericInput("taxa_pval_up", "Adjusted P Value", min = 0, max = 0.1,
                                      step = 0.01, value = 0.05)))
       })
       output$feat_selectors <- renderUI({
@@ -2243,7 +2464,7 @@ server <- function(input, output, session) {
                         numericInput("feat_FC_up", "Fold Change Level", min = 0, max = 10,
                                      step = 0.5, value = 1.5)),
                  column(3, 
-                        numericInput("feat_pval_up", "Adjusted P Value", min = 0, max = 1,
+                        numericInput("feat_pval_up", "Adjusted P Value", min = 0, max = 0.1,
                                      step = 0.01, value = 0.05)))
       })
     }
@@ -2280,7 +2501,7 @@ server <- function(input, output, session) {
         
         RA <- unlist(x)
         RA_clr <- unlist(cc)
-        sample_id <- rep(colnames(spec_order), nrow(spec_order))
+        sample_id <- rep(colnames(spec_order), each = nrow(spec_order))
         
         group_titles = c()
         for (i in 1:length(groupings)) {
@@ -2290,9 +2511,9 @@ server <- function(input, output, session) {
           group_titles = c(group_titles, title_rep)
         }
         
-        group_titles2 = rep(group_titles, nrow(spec_order))
+        group_titles2 = rep(group_titles, each = nrow(spec_order))
         
-        Taxa <- rep(rownames(cc), each = ncol(cc))
+        Taxa <- rep(rownames(spec_order), ncol(spec_order))
         
         stat_df <- data.frame(Sample = sample_id, Group = group_titles2, RA = RA,
                               RA_clr = RA_clr, Taxa = Taxa)
@@ -2301,22 +2522,25 @@ server <- function(input, output, session) {
         #a_test <- anova(lm(RA_clr ~ Group + Taxa, stat_df))
         uniq_bugs <- as.character(unlist(unique(stat_df$Taxa)))
         stat_results <- data.frame(Taxa = NA, F_val = NA, P_val = NA)
+        hoc_results <- data.frame(Taxa = NA, Int = NA, p_adj = NA)
         for (i in 1:length(uniq_bugs)){
-          bug <- uniq_bugs[i]
-          test <- subset(stat_df, Taxa == bug)
-          
+          taxa <- uniq_bugs[i]
+          test <- subset(stat_df, Taxa == taxa)
           a_test <- anova(lm(RA ~ Group, test))
           result <- data.frame(Taxa = uniq_bugs[i],
                                F_val = a_test$`F value`[1],
                                P_val = a_test$`Pr(>F)`[1])
           stat_results <- rbind(stat_results, result)
+          if (result$P_val < 0.05){
+            h_test <- aov(RA ~ Group, test)
+            tk <- TukeyHSD(h_test, "Group")
+            hresult <- data.frame(Taxa = rep(uniq_bugs[i], ncol(combn(length(unique(test$Group)), 2))),
+                                  Int = rownames(tk$Group),
+                                  p_adj = tk$Group[,4])
+            hoc_results <- rbind(hoc_results, hresult)
+          }
         }
-        stat_results$p_adj <- p.adjust(stat_results$P_val, method = "BH")
-        
-        #keepers <- subset(stat_results, p_adj < input$taxa_pval_up)$Taxa
-        #print(length(keepers))
-        #keepers
-        stat_results
+        stat_results <- hoc_results
       }
       
       if (input$input_type == "EBI"){
@@ -2380,7 +2604,7 @@ server <- function(input, output, session) {
       keepers
     } else {
       stat_results <- da_taxa_stat()
-      keepers <- subset(stat_results, p_adj < input$taxa_pval_up)$Taxa
+      keepers <- unique(subset(stat_results, p_adj < input$taxa_pval_up)$Taxa)
       print(length(keepers))
       keepers
     }
@@ -2394,61 +2618,23 @@ server <- function(input, output, session) {
     groupings = new_group_names()
     grouping_nums = group_dims()
     
-    go_show <- spec_order[da_taxa,]
-
-    go_show_nums2 <- log10(go_show + 1)
-    
-    cc = rownames(go_show_nums2)
-    #cc = factor(cc, levels = cc)
-    #levels(cc) <- 1:length(levels(cc))
-    #x <- as.numeric(cc)
-    
-    #rownames(go_show_nums2) <- x
-    
     ### colors
     bin <- c()
     for (i in 1:length(groupings)){
       use <- rep(groupings[i], grouping_nums[i])
       bin <- c(bin, use)
     }
-    colss = bin
-    cc = length(unique(bin))
-    cols <- randomColor(length(groupings))
     
-    for (i in 1:cc){
-      colss = gsub(groupings[i], cols[i], colss)
-    }
-    
-    col_col <- t(matrix(colss))
-    col_col <- rbind(col_col, col_col)
-    
-    margin_factor <- nrow(go_show_nums2)
+    go_show <- spec_order[da_taxa,]
 
-    if (margin_factor > 20) {
-      marg_side <- 1
-    } else {
-      marg_side <- (1/margin_factor)*30
-    }
-    
-
-    heatty = heatmap.3(t(t(go_show_nums2)), scale = 'row', col = viridis(100),
-                       margins = c(5,5),
-              Colv = F, labCol = "", cexRow = marg_side,
-              ColSideColors = t(col_col))
-    
-    #legend(0.22,0.99,      
-    #       legend = groupings,
-    #       col = cols, 
-    #       lty= 1,             
-    #       lwd = 5,           
-    #       cex=1,
-    #       horiz = T
-    #)
+    go_show_nums2 <- log10(go_show + 1)
     
     gg_nums <- go_show_nums2
     
-    gg_nums_feat <- gg_nums[heatty$rowInd,]
-    gg_nums_samp <- gg_nums_feat[,heatty$colInd]
+    feat_clust <- hclust(dist(gg_nums))
+    
+    gg_nums_feat <- gg_nums[feat_clust$order,]
+    gg_nums_samp <- gg_nums_feat
     
     gg_names <- factor(colnames(gg_nums_samp), levels = colnames(gg_nums_samp))
     gg_feat <- factor(rownames(gg_nums_samp), levels = rownames(gg_nums_samp))
@@ -2485,12 +2671,16 @@ server <- function(input, output, session) {
       tickcolor = 'white',
       showgrid = FALSE
     )
-    p <- plot_ly(source = "source",
+    p <- plot_ly(source = "t_exp",
                  x = plotter$names, y = plotter$feat,
                  text = plotter$groups,
                  z = plotter$Z_scored_CPM, type = "heatmap",
                  hoverinfo = 'y+text',
-                 colorbar = list(x = -0.2, xanchor = 'left')) %>%
+                 colorbar = list(x = -0.2, 
+                                 xanchor = 'left',
+                                 tickmode='array',
+                                 tickvals = c(min(plotter$Z_scored_CPM),max(plotter$Z_scored_CPM)),
+                                 ticktext = c("low", "high"))) %>%
       layout(yaxis = ax, xaxis = ax)
     
     
@@ -2508,62 +2698,39 @@ server <- function(input, output, session) {
   })
   
   da_taxa_stat_mat <- reactive({
-    event.data <- event_data("plotly_click", source = "source")
+    event.data <- event_data("plotly_click", source = "t_exp")
+    
+    validate(
+      need(is.null(event.data) == F, "Click on the Heatmap")
+    )
     
     if (input$input_type == "Biobakery"){
-      spec_order <- reorder_spec_mat()
+      validate(
+        need(event.data$y %in% da_taxa_stat()$Taxa, "Click on the Heatmap")
+      )
       
       groupings = new_group_names()
       grouping_nums = group_dims()
-      
-      spec_trans <- clr(spec_order)
-      cc <- data.frame(spec_trans)
-      #boxplot.matrix(spec_trans)
-      
-      x <- sweep(spec_order, 1L, rowMeans(spec_order, na.rm = T), check.margin = FALSE)
-      sx <- apply(x, 1L, sd, na.rm = T)
-      x <- sweep(x, 1L, sx, "/", check.margin = FALSE)
-      
-      
-      RA <- unlist(x)
-      RA_clr <- unlist(cc)
-      sample_id <- rep(colnames(spec_order), nrow(spec_order))
-      
-      group_titles = c()
-      for (i in 1:length(groupings)) {
-        title = groupings[i]
-        reps = grouping_nums[i]
-        title_rep = rep(title, reps)
-        group_titles = c(group_titles, title_rep)
-      }
-      
-      group_titles2 = rep(group_titles, nrow(spec_order))
-      
-      Taxa <- rep(rownames(cc), each = ncol(cc))
-      
-      stat_df <- data.frame(Sample = sample_id, Group = group_titles2, RA = RA,
-                            RA_clr = RA_clr, Taxa = Taxa)
-      
       
       #### now select bug
       
       select_taxa <- event.data$y
       
-      hoc_df <- subset(stat_df, Taxa %in% select_taxa)
-      uniq_bugs <- as.character(unlist(unique(hoc_df$Taxa)))
-      test <- subset(stat_df, Taxa == uniq_bugs)
-      
-      h_test <- aov(RA ~ Group, test)
-      tk <- TukeyHSD(h_test, "Group")
+      statter <- da_taxa_stat()
+      statter2 <- subset(statter, Taxa %in% select_taxa)
       
       group_num <- length(groupings)
+      group1 <- gsub('.*-', "", statter2$Int[1])
+      group_rest <- gsub("-.*", "", statter2$Int[1:(group_num-1)])
+      group_names <- c(group1, group_rest)
       
       resm <- matrix(NA, group_num, group_num)
-      resm[lower.tri(resm) ] <-round(tk$Group[,4], 4)
+      resm[lower.tri(resm) ] <-round(statter2$p_adj, 4)
       resm <- t(resm)
-      resm[lower.tri(resm) ] <-round(tk$Group[,4], 4)
-      rownames(resm) <- levels(test$Group)
-      colnames(resm) <- levels(test$Group)
+      resm[lower.tri(resm) ] <-round(statter2$p_adj, 4)
+      rownames(resm) <- group_names
+      colnames(resm) <- group_names
+      print(resm)
       resm
       
     } else {
@@ -2604,95 +2771,64 @@ server <- function(input, output, session) {
   
   
   observe({
-    event.data <- event_data("plotly_click", source = "source")
+    event.data <- event_data("plotly_click", source = "t_exp")
     
     # If NULL dont do anything
-    if (is.null(event.data) == T){
-    } else {
+    output$da_taxa_stat_heat <- renderPlot({
+      validate(
+        need(is.null(event.data) == F, "Click on the Heatmap")
+      )
+      resm <- da_taxa_stat_mat()
       
-      if (input$numInputs > 2){
-        output$da_taxa_stat_heat <- renderPlot({
-          resm <- da_taxa_stat_mat()
-          
-          resm_lab <- resm
-          resm_lab[resm_lab < 0.0001] <- "<0.0001"
-          
-          
-          if (any(resm<0.05, na.rm = T)){
-            breaker = seq(0, 0.05, by = 0.0005)
-            coler = c(colorRampPalette(c("red", "white"))(n=100))
-          } else {
-            breaker <- seq(0, 1, by = 0.01)
-            coler <- c(colorRampPalette(c("white"))(n=100))
-          }
-          
-          select_taxa <- event.data$y
-          new_name <- unlist(strsplit(select_taxa, ";"))
-          new_name <- new_name[length(new_name)]
-          
-          par(cex.main=0.8)
-          heatmap.3(data.matrix(resm),
-                    cellnote = resm_lab,
-                    notecol="black",
-                    main=new_name,
-                    #key = TRUE,
-                    #keysize = 1.0,
-                    key.title = NULL,
-                    breaks = breaker,
-                    col = coler,
-                    #breaks = seq(0, 0.05, by = 0.0005),
-                    #col=c(colorRampPalette(c("red", "white"))(n=100)),
-                    dendrogram = 'none',
-                    Rowv=F,
-                    Colv=F,
-                    margins=c(10,10),
-                    cexRow=1.2,
-                    cexCol=1.2#,
-                    #na.color="gray60"
-          )
-        })
+      resm_lab <- resm
+      resm_lab[resm_lab < 0.0001] <- "<0.0001"
+      
+      
+      if (any(resm<0.05, na.rm = T)){
+        breaker = seq(0, 0.05, by = 0.0005)
+        coler = c(colorRampPalette(c("red", "white"))(n=100))
       } else {
-        output$da_taxa_stat_tab <- renderTable({
-          resm <- da_taxa_stat_mat()
-          
-          resm_lab <- resm
-          resm_lab[resm_lab < 0.0001] <- "<0.0001"
-          resm_lab <- cbind(Names = rownames(resm_lab), resm_lab)
-          resm_lab
-        }, caption = {
-          select_taxa <- event.data$y
-          new_name <- unlist(strsplit(select_taxa, ";"))
-          new_name <- new_name[length(new_name)]
-          return(new_name)
-        })
+        breaker <- seq(0, 1, by = 0.01)
+        coler <- c(colorRampPalette(c("white"))(n=100))
       }
-    }
+      
+      select_taxa <- event.data$y
+      new_name <- unlist(strsplit(select_taxa, ";"))
+      new_name <- new_name[length(new_name)]
+      
+      if (input$numInputs == 2){
+        resm[1,2] = resm[1,2] + 0.0000001
+      }
+      
+      par(cex.main=0.8)
+      heatmap.3(data.matrix(resm),
+                cellnote = resm_lab,
+                notecol="black",
+                #main=new_name,
+                #key = TRUE,
+                #keysize = 1.0,
+                key.title = NULL,
+                breaks = breaker,
+                col = coler,
+                #breaks = seq(0, 0.05, by = 0.0005),
+                #col=c(colorRampPalette(c("red", "white"))(n=100)),
+                dendrogram = 'none',
+                Rowv=F,
+                Colv=F,
+                margins=c(10,10),
+                cexRow=1.2,
+                cexCol=1.2#,
+                #na.color="gray60"
+      )
+      title(new_name, line= -2.5)
+    })
   })
   
   observe({
-    if (input$numInputs > 2){
-      output$da_taxa_stat_ui <- renderUI({
-        plotOutput("da_taxa_stat_heat")
-      })
-    } else {
-      output$da_taxa_stat_ui <- renderUI({
-        div(tableOutput("da_taxa_stat_tab"),
-            tags$style(HTML(".table {font-size:18px; }",
-                            "caption {color:#ebebeb")))
-        })
-    }
+    output$da_taxa_stat_ui <- renderUI({
+      plotOutput("da_taxa_stat_heat")
+    })
   })
-      
-  #   }
-  #   else {
-  #     output$da_taxa_stat_tab <- renderTable({
-  #       resm <- da_taxa_stat_mat()
-  #       resm_lab <- resm
-  #       resm_lab[resm_lab < 0.0001] <- "<0.0001"
-  #       resm_lab
-  #     })
-  #   }
-  # })
  
   # #### Taxa Search UI elements! ####
   # 
@@ -2851,539 +2987,551 @@ server <- function(input, output, session) {
   # })
   # 
   # 
-  # #### Correlation Plot #####
-  # 
-  # ## Correlation selections
-  # sig_tab <- reactive({
-  #   gfam_DF = acc_full()
-  #   samp_paths = gfam_DF
-  #   #samp_paths = gfam_DF[apply(gfam_DF==0,1,sum)<=(0.90*length(group_names())),]
-  #   samp_paths$Gene_Family <- paste(" ", samp_paths$Gene_Family, " ", sep="")
-  #   samp_paths$Gene_Family
-  # })
-  # 
-  # ## Update selections ##
-  # observe({
-  #   if (input$testme) {
-  #     updateSelectizeInput(session,'sig_select', choices = sig_tab(), server = TRUE)
-  #   }
-  #   else {
-  #     if (is.null(input$file1)) {}
-  #     else{
-  #       updateSelectizeInput(session,'sig_select', choices = sig_tab(), server = TRUE)
-  #     }
-  #   }
-  # })
-  # 
-  # # All sample Correlation Plot #
-  # 
-  # actual_corr_plot <- reactive({
-  #   if (input$testme) {
-  #     validate(
-  #       need(length(group_dims())==4, "Please visit the group tab to verify group assignment")
-  #     )
-  #   }
-  #   else{
-  #     validate(
-  #       need(input$file1, "Please provide a file in the Upload Tab") %then%
-  #       need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
-  #   }
-  #   
-  #   validate(
-  #     need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
-  #   )
-  #   corr_list = input$sig_select
-  # 
-  #   gfam_DF1 = acc_full()
-  #   col_num = ncol(gfam_DF1)
-  #   row_num = nrow(gfam_DF1)
-  #   reorder_samps = gfam_DF1[,-1]
-  #   reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
-  #   header_DF = gfam_DF1[,1]
-  #   
-  #   gfam_DF = cbind(header_DF, reorder_samps)
-  #   samp_paths = gfam_DF
-  #   samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
-  #   
-  #   
-  #   heyo = samp_paths[grep(paste(corr_list, collapse = '|'), samp_paths$Gene_Family), ]
-  #   
-  #   col = (ncol(samp_paths))-1
-  #   row = nrow(heyo)
-  #   
-  #   heyo_small <- heyo
-  #   rownames(heyo_small) = heyo$Gene_Family
-  #   heyo_small = heyo_small[,-1]
-  #   
-  #   heyo_side = data.frame(t(heyo_small))
-  #   colnames(heyo_side) = rownames(heyo_small)
-  #   
-  #   library(psych)
-  #   hah2 = corr.test(heyo_side, method = "spearman")
-  #   
-  #   corr_mat = as.matrix(hah2$r)
-  #   rownames(corr_mat) = paste(1:nrow(corr_mat))
-  #   colnames(corr_mat) = paste(1:ncol(corr_mat))
-  #   
-  #   orig_p = hah2$p
-  #   orig_p[col(orig_p) == row(orig_p) | upper.tri(orig_p)] <- NA
-  #   new_ps = p.adjust(orig_p, method = "BH", n = length(orig_p))
-  #   new_p_mat = matrix(new_ps, ncol = ncol(orig_p), nrow = nrow(orig_p))
-  #   
-  #   new_p_mat[upper.tri(new_p_mat)] = t(new_p_mat)[upper.tri(new_p_mat)]
-  #   diag(new_p_mat) = rep(1,nrow(new_p_mat))
-  # 
-  #   p_list = c(new_p_mat)
-  #   p_dims = dim(new_p_mat)
-  #   
-  #   sym_list = c()
-  #   for (i in p_list){
-  #     if (is.na(i)){
-  #       sym = ""
-  #     }
-  #     else {
-  #       if (i > 0){
-  #         sym = ""
-  #         if (i < 0.05){
-  #           sym = "*"
-  #           if (i<0.01){
-  #             sym = "**"
-  #             if(i<0.001){
-  #               sym = "***"
-  #             }
-  #           }
-  #         }
-  #       }
-  #     }
-  #     sym_list = c(sym_list, sym)
-  #   }
-  #   
-  #   sym_mat = matrix(sym_list, ncol = p_dims[1], nrow = p_dims[2])
-  # 
-  #   library(gplots)
-  #   my_palette <-colorRampPalette(c("blue", "white", "red"))(n=100)
-  #   corr_mat[is.na(corr_mat)] <- 0
-  #   v <- heatmap.2(corr_mat,
-  #                  cellnote = sym_mat, notecol="black",
-  #                  main="Correlation Values across \nAll Samples", #heatmap title
-  #                  density.info="none",
-  #                  #key = TRUE,
-  #                  #keysize = 1.0,
-  #                  breaks = seq(-1, 1, by = 0.02),
-  #                  col=my_palette,
-  #                  dendrogram="both",
-  #                  margins=c(5,5),
-  #                  cexRow=1,
-  #                  cexCol=1.2,
-  #                  trace=c("none"),
-  #                  na.color="gray60"
-  #   )
-  #   v
-  # })
-  # 
-  # output$corr_plot <- renderPlot({
-  #   actual_corr_plot()
-  # })
-  # 
-  # actual_corr_names <- reactive({
-  #   if (input$testme) {
-  #     validate(
-  #       need(length(group_dims())==4, "Please visit the group tab to verify group assignment")
-  #     )
-  #   }
-  #   else{
-  #     validate(
-  #       need(input$file1, "Please provide a file in the Upload Tab") %then%
-  #         need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
-  #   }
-  #   
-  #   validate(
-  #     need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
-  #   )
-  #   corr_list = input$sig_select
-  #   
-  #   gfam_DF1 = acc_full()
-  #   col_num = ncol(gfam_DF1)
-  #   row_num = nrow(gfam_DF1)
-  #   reorder_samps = gfam_DF1[,-1]
-  #   reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
-  #   header_DF = gfam_DF1[,1]
-  #   
-  #   gfam_DF = cbind(header_DF, reorder_samps)
-  #   samp_paths = gfam_DF
-  #   samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
-  #   
-  #   
-  #   heyo = samp_paths[grep(paste(corr_list, collapse = '|'), samp_paths$Gene_Family), ]
-  #   actual_corr_names <- heyo$Gene_Family
-  #   actual_corr_names
-  # })
-  # 
-  # 
-  # # Generate list of correlation matrices for each Group
-  # group_corr_plist <- reactive({
-  #   if (input$testme) {}
-  #   else{
-  #     validate(
-  #       need(input$file1, "Please provide a file in the Upload Tab") %then%
-  #       need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
-  #   }
-  #   
-  #   validate(
-  #     need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
-  #   )
-  #   corr_list2 = input$sig_select
-  # 
-  #   groupings = new_group_names()
-  #   grouping_nums = group_dims()
-  #   
-  #   group_titles = c()
-  #   for (i in 1:length(groupings)) {
-  #     title = groupings[i]
-  #     reps = grouping_nums[i]
-  #     title_rep = rep(title, reps)
-  #     group_titles = c(group_titles, title_rep)
-  #   }
-  #   
-  #   group_titles_uniq = unique(group_titles)
-  #   
-  #   corr_mat_list=list()
-  #   for (j in 1:input$numInputs){
-  # 
-  #     gfam_DF1 = acc_full()
-  #     col_num = ncol(gfam_DF1)
-  #     row_num = nrow(gfam_DF1)
-  #     reorder_samps = gfam_DF1[,2:col_num]
-  #     reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
-  #     header_DF = gfam_DF1[,1]
-  # 
-  #     gfam_DF = cbind(header_DF, reorder_samps)
-  #     samp_paths = gfam_DF
-  #     samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
-  # 
-  #     heyo = samp_paths[grep(paste(corr_list2, collapse = '|'), samp_paths$Gene_Family), ]
-  # 
-  #     col = (ncol(samp_paths))-1
-  #     row = nrow(heyo)
-  # 
-  #     heyo_small<-heyo
-  #     rownames(heyo_small) = heyo$Gene_Family
-  #     heyo_small = heyo_small[,-1]
-  # 
-  #     heyo_side = data.frame(t(heyo_small))
-  #     colnames(heyo_side) = rownames(heyo_small)
-  #     
-  #     heyo_side$Group = group_titles
-  #     heyo_side_real = subset(heyo_side, Group == group_titles_uniq[j], select = -c(Group))
-  #     
-  # 
-  #     library(psych)
-  #     hah2 = corr.test(heyo_side_real, method = "spearman")
-  # 
-  #     corr_mat = as.matrix(hah2$r)
-  #     rownames(corr_mat) = paste(1:nrow(corr_mat))
-  #     colnames(corr_mat) = paste(1:ncol(corr_mat))
-  # 
-  #     corr_mat_list[[j]] <- corr_mat
-  #   }
-  #   corr_mat_list
-  # })
-  # 
-  # # Generate list of correlation significance symbols for each group
-  # group_sym_plist <- reactive({
-  #   if (input$testme) {}
-  #   else{
-  #     validate(
-  #       need(input$file1, "Please provide a file in the Upload Tab") %then%
-  #       need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
-  #   }
-  #   
-  #   validate(
-  #     need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
-  #   )
-  #   corr_list2 = input$sig_select
-  # 
-  #   groupings = new_group_names()
-  #   grouping_nums = group_dims()
-  #   
-  #   group_titles = c()
-  #   for (i in 1:length(groupings)) {
-  #     title = groupings[i]
-  #     reps = grouping_nums[i]
-  #     title_rep = rep(title, reps)
-  #     group_titles = c(group_titles, title_rep)
-  #   }
-  #   
-  #   group_titles_uniq = unique(group_titles)
-  #   
-  #   sym_mat_list=list()
-  #   for (j in 1:input$numInputs){
-  #     
-  #     gfam_DF1 = acc_full()
-  #     col_num = ncol(gfam_DF1)
-  #     row_num = nrow(gfam_DF1)
-  #     reorder_samps = gfam_DF1[,2:col_num]
-  #     reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
-  #     header_DF = gfam_DF1[,1]
-  #     
-  #     gfam_DF = cbind(header_DF, reorder_samps)
-  #     samp_paths = gfam_DF
-  #     #samp_paths = gfam_DF[apply(gfam_DF==0,1,sum)<=(0.90*length(group_names())),]
-  #     samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
-  #     
-  #     heyo = samp_paths[grep(paste(corr_list2, collapse = '|'), samp_paths$Gene_Family), ]
-  #     
-  #     col = (ncol(samp_paths))-1
-  #     row = nrow(heyo)
-  #     
-  #     heyo_small <- heyo
-  #     rownames(heyo_small) = heyo$Gene_Family
-  #     heyo_small = heyo_small[,-1]
-  #     
-  #     heyo_side = data.frame(t(heyo_small))
-  #     colnames(heyo_side) = rownames(heyo_small)
-  #     
-  #     heyo_side$Group = group_titles
-  #     heyo_side_real = subset(heyo_side, Group == group_titles_uniq[j], select = -c(Group))
-  #     
-  #     
-  #     library(psych)
-  #     hah2 = corr.test(heyo_side_real, method = "spearman")
-  #     
-  #     
-  #     corr_mat = as.matrix(hah2$r)
-  #     rownames(corr_mat) = paste(1:nrow(corr_mat))
-  #     colnames(corr_mat) = paste(1:ncol(corr_mat))
-  #     
-  #     orig_p = hah2$p
-  #     orig_p[col(orig_p) == row(orig_p) | upper.tri(orig_p)] <- NA
-  #     new_ps = p.adjust(orig_p, method = "BH", n = length(orig_p))
-  #     new_p_mat = matrix(new_ps, ncol = ncol(orig_p), nrow = nrow(orig_p))
-  #     
-  #     new_p_mat[upper.tri(new_p_mat)] = t(new_p_mat)[upper.tri(new_p_mat)]
-  #     diag(new_p_mat) = rep(1,nrow(new_p_mat))
-  # 
-  #     p_list = c(new_p_mat)
-  #     p_dims = dim(new_p_mat)
-  #     
-  #     sym_list = c()
-  #     for (i in p_list){
-  #       if (is.na(i)){
-  #         sym = ""
-  #       }
-  #       else {
-  #         if (i > 0){
-  #           sym = ""
-  #           if (i < 0.05){
-  #             sym = "*"
-  #             if (i<0.01){
-  #               sym = "**"
-  #               if(i<0.001){
-  #                 sym = "***"
-  #               }
-  #             }
-  #           }
-  #         }
-  #       }
-  #       sym_list = c(sym_list, sym)
-  #     }
-  #     
-  #     sym_mat = matrix(sym_list, ncol = p_dims[1], nrow = p_dims[2])
-  #     sym_mat_list[[j]] <- sym_mat
-  #   }
-  #   sym_mat_list
-  # })
-  # 
-  # 
-  # output$sig_message <- renderText({
-  #   paste("* = p < 0.05", "** = p < 0.01", "*** = p < 0.001", sep='\n')
-  # })
-  # 
-  # # Generate Table of Selected Gene Families
-  # corr_label_table <- reactive({
-  #   if (input$testme) {}
-  #   else{
-  #     validate(
-  #       need(input$file1, "") %then%
-  #       need(unlist(grouped_samps()), ""))
-  #   }
-  #   
-  #   validate(
-  #     need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
-  #   )
-  #   
-  #   Gene_Families = actual_corr_names()
-  #   nums = length(Gene_Families)
-  #   Label = paste(1:nums)
-  #   Label_Matrix = data.frame(Gene_Families, Label)
-  #   #print(Label_Matrix)
-  #   Label_Matrix
-  # })
-  # 
-  # output$corr_labels <- renderTable({
-  #   corr_label_table()
-  # })
-  # 
-  # output$corr_table_download <- downloadHandler(
-  #   filename = function() { paste("correlation_sample_key", '.txt', sep='') },
-  #   content = function(file) {
-  #     corr_tab = corr_label_table()
-  #     corr_tab2 = data.frame(corr_tab)
-  #     write.table(corr_tab2, file, row.names = FALSE, sep = '\t', quote = FALSE)
-  #   }
-  # )
-  # 
-  # observeEvent({
-  #   new_group_names()
-  #   input$sig_select
-  #   }, {
-  #   if (input$testme) {
-  #     validate(
-  #       need(length(group_dims())==4, "")
-  #     )
-  #   }
-  #   else{
-  #     validate(
-  #       need(input$file1, "") 
-  #     )
-  #   }
-  #   
-  #   if (input$numInputs > 1) {
-  #     #checker = input$sig_select
-  #     #display_name = group_names()
-  #     output$group_corrs <- renderUI({ get_plot_output_list(max_plots, 
-  #                                                           input$numInputs, 
-  #                                                           group_corr_plist(),
-  #                                                           group_sym_plist(),
-  #                                                           new_group_names())
-  #     })
-  #   }
-  # })
-  # 
-  # 
-  # # Download full correlation heatmap
-  # output$corr_download <- downloadHandler(
-  #   filename = function() { paste("all_gene_family_correlation", '.png', sep='') },
-  #   content = function(file) {
-  #     png(file, width = 25, height = 20, units ='cm', res = 300)
-  #     corr_list = input$sig_select
-  #     
-  #     gfam_DF1 = acc_full()
-  #     col_num = ncol(gfam_DF1)
-  #     row_num = nrow(gfam_DF1)
-  #     reorder_samps = gfam_DF1[,2:col_num]
-  #     reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
-  #     header_DF = gfam_DF1[,1]
-  #     
-  #     gfam_DF = cbind(header_DF, reorder_samps)
-  #     samp_paths = gfam_DF
-  #     #samp_paths = gfam_DF[apply(gfam_DF==0,1,sum)<=(0.90*length(group_names())),]
-  #     samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
-  #     
-  #     
-  #     heyo = samp_paths[grep(paste(corr_list, collapse = '|'), samp_paths$Gene_Family), ]
-  #     
-  #     col = (ncol(samp_paths))-1
-  #     row = nrow(heyo)
-  #     
-  #     heyo_small<-heyo
-  #     rownames(heyo_small) = heyo$Gene_Family
-  #     heyo_small = heyo_small[,-1]
-  #     
-  #     heyo_side = data.frame(t(heyo_small))
-  #     colnames(heyo_side) = rownames(heyo_small)
-  #     
-  #     library(psych)
-  #     hah2 = corr.test(heyo_side, method = "spearman")
-  #     
-  #     
-  #     corr_mat = as.matrix(hah2$r)
-  #     rownames(corr_mat) = paste(1:nrow(corr_mat))
-  #     colnames(corr_mat) = paste(1:ncol(corr_mat))
-  #     
-  #     orig_p = hah2$p
-  #     orig_p[col(orig_p) == row(orig_p) | upper.tri(orig_p)] <- NA
-  #     new_ps = p.adjust(orig_p, method = "BH", n = length(orig_p))
-  #     new_p_mat = matrix(new_ps, ncol = ncol(orig_p), nrow = nrow(orig_p))
-  #     
-  #     new_p_mat[upper.tri(new_p_mat)] = t(new_p_mat)[upper.tri(new_p_mat)]
-  #     diag(new_p_mat) = rep(1,nrow(new_p_mat))
-  #     #new_p_dat = data.frame(new_p_mat)
-  #     
-  #     p_list = c(new_p_mat)
-  #     p_dims = dim(new_p_mat)
-  #     
-  #     sym_list = c()
-  #     for (i in p_list){
-  #       if (is.na(i)){
-  #         sym = ""
-  #       }
-  #       else {
-  #         if (i > 0){
-  #           sym = ""
-  #           if (i < 0.05){
-  #             sym = "*"
-  #             if (i<0.01){
-  #               sym = "**"
-  #               if(i<0.001){
-  #                 sym = "***"
-  #               }
-  #             }
-  #           }
-  #         }
-  #       }
-  #       sym_list = c(sym_list, sym)
-  #     }
-  #     
-  #     sym_mat = matrix(sym_list, ncol = p_dims[1], nrow = p_dims[2])
-  #     
-  #     library(gplots)
-  #     my_palette <-colorRampPalette(c("blue", "white", "red"))(n=100)
-  #     corr_mat[is.na(corr_mat)] <- 0
-  #     v <- heatmap.2(corr_mat,
-  #                    cellnote = sym_mat, notecol="black",
-  #                    main="Correlation Values across \nAll Samples", #heatmap title
-  #                    density.info="none",
-  #                    #key = TRUE,
-  #                    #keysize = 1.0,
-  #                    breaks = seq(-1, 1, by = 0.02),
-  #                    col=my_palette,
-  #                    dendrogram="both",
-  #                    margins=c(5,5),
-  #                    cexRow=1,
-  #                    cexCol=1.2,
-  #                    trace=c("none"),
-  #                    na.color="gray60"
-  #     )
-  #     v
-  #     dev.off()
-  #   }
-  # )
-  # 
-  # ## UI Elements for downloading group correlation ##
-  # 
-  # output$group_download <- renderUI({
-  #   lapply(1:input$numInputs, function(i) {
-  #     display_name = new_group_names()
-  #     downloadButton(paste0("downloadData", i), paste("Download", display_name[i], sep=" "))
-  #   })
-  # })
-  # 
-  # observe({
-  #   lapply(1:input$numInputs, function(i) {
-  #     output[[paste0("downloadData", i)]] <- downloadHandler(
-  #       filename = function() { paste(new_group_names()[i], "_correlation", '.png', sep='') },
-  #       content = function(file) {
-  #         png(file, width = 25, height = 20, units ='cm', res = 300)
-  #         download_plot_output_list(max_plots,
-  #                                   1,
-  #                                   group_corr_plist()[i],
-  #                                   group_sym_plist()[i],
-  #                                   new_group_names()[i])
-  #         dev.off()
-  #       }
-  #     )
-  #   })
-  #})
+  #### Correlation Plot #####
+
+  ## Correlation selections
+  sig_tab <- reactive({
+    gfam_DF = acc_full()
+    samp_paths = gfam_DF
+    #samp_paths = gfam_DF[apply(gfam_DF==0,1,sum)<=(0.90*length(group_names())),]
+    #samp_paths$Gene_Family <- paste(" ", samp_paths$Gene_Family, " ", sep="")
+    samp_paths$Feature
+  })
+
+  ## Update selections ##
+  observe({
+    if (input$testme) {
+      updateSelectizeInput(session,'sig_select', choices = sig_tab(), server = TRUE)
+    }
+    else {
+      if (is.null(input$file1)) {}
+      else{
+        updateSelectizeInput(session,'sig_select', choices = sig_tab(), server = TRUE)
+      }
+    }
+  })
+
+  # All sample Correlation Plot #
+
+  actual_corr_plot <- reactive({
+    if (input$testme) {
+      validate(
+        need(length(group_dims())==4, "Please visit the group tab to verify group assignment")
+      )
+    }
+    else{
+      validate(
+        need(input$file1, "Please provide a file in the Upload Tab") %then%
+        need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
+    }
+
+    validate(
+      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+    )
+    corr_list = input$sig_select
+
+    gfam_DF1 = acc_full()
+    col_num = ncol(gfam_DF1)
+    row_num = nrow(gfam_DF1)
+    reorder_samps = gfam_DF1[,-1]
+    reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
+    header_DF = gfam_DF1[,1]
+
+    gfam_DF = cbind(header_DF, reorder_samps)
+    samp_paths = gfam_DF
+    #samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
+    
+    #heyo = samp_paths[grep(paste(corr_list, collapse = '|'), samp_paths$Feature), ]
+    heyo <- subset(samp_paths, header_DF %in% corr_list)
+    colnames(heyo)[1] = "Feature"
+    
+    col = (ncol(samp_paths))-1
+    row = nrow(heyo)
+
+    heyo_small <- heyo
+    rownames(heyo_small) = heyo$Feature
+    heyo_small = heyo_small[,-1]
+
+    heyo_side = data.frame(t(heyo_small))
+    colnames(heyo_side) = rownames(heyo_small)
+
+    library(psych)
+    hah2 = corr.test(heyo_side, method = "spearman")
+
+    corr_mat = as.matrix(hah2$r)
+    rownames(corr_mat) = paste(1:nrow(corr_mat))
+    colnames(corr_mat) = paste(1:ncol(corr_mat))
+
+    orig_p = hah2$p
+    orig_p[col(orig_p) == row(orig_p) | upper.tri(orig_p)] <- NA
+    new_ps = p.adjust(orig_p, method = "BH", n = length(orig_p))
+    new_p_mat = matrix(new_ps, ncol = ncol(orig_p), nrow = nrow(orig_p))
+
+    new_p_mat[upper.tri(new_p_mat)] = t(new_p_mat)[upper.tri(new_p_mat)]
+    diag(new_p_mat) = rep(1,nrow(new_p_mat))
+
+    p_list = c(new_p_mat)
+    p_dims = dim(new_p_mat)
+
+    sym_list = c()
+    for (i in p_list){
+      if (is.na(i)){
+        sym = ""
+      }
+      else {
+        if (i > 0){
+          sym = ""
+          if (i < 0.05){
+            sym = "*"
+            if (i<0.01){
+              sym = "**"
+              if(i<0.001){
+                sym = "***"
+              }
+            }
+          }
+        }
+      }
+      sym_list = c(sym_list, sym)
+    }
+
+    sym_mat = matrix(sym_list, ncol = p_dims[1], nrow = p_dims[2])
+
+    library(gplots)
+    my_palette <-colorRampPalette(c("blue", "white", "red"))(n=100)
+    corr_mat[is.na(corr_mat)] <- 0
+    v <- heatmap.2(corr_mat,
+                   cellnote = sym_mat, notecol="black",
+                   main="Correlation Values across \nAll Samples", #heatmap title
+                   density.info="none",
+                   #key = TRUE,
+                   #keysize = 1.0,
+                   breaks = seq(-1, 1, by = 0.02),
+                   col=my_palette,
+                   dendrogram="both",
+                   margins=c(5,5),
+                   cexRow=1,
+                   cexCol=1.2,
+                   trace=c("none"),
+                   na.color="gray60"
+    )
+    v
+  })
+
+  output$corr_plot <- renderPlot({
+    actual_corr_plot()
+  })
+
+  actual_corr_names <- reactive({
+    if (input$testme) {
+      validate(
+        need(length(group_dims())==4, "Please visit the group tab to verify group assignment")
+      )
+    }
+    else{
+      validate(
+        need(input$file1, "Please provide a file in the Upload Tab") %then%
+          need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
+    }
+
+    validate(
+      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+    )
+    corr_list = input$sig_select
+
+    gfam_DF1 = acc_full()
+    col_num = ncol(gfam_DF1)
+    row_num = nrow(gfam_DF1)
+    reorder_samps = gfam_DF1[,-1]
+    reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
+    header_DF = gfam_DF1[,1]
+
+    gfam_DF = cbind(header_DF, reorder_samps)
+    samp_paths = gfam_DF
+    #samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
+
+
+    #heyo = samp_paths[grep(paste(corr_list, collapse = '|'), samp_paths$Gene_Family), ]
+    heyo <- subset(samp_paths, header_DF %in% corr_list)
+    colnames(heyo)[1] = "Feature"
+
+    actual_corr_names <- heyo$Feature
+    actual_corr_names
+  })
+
+
+  # Generate list of correlation matrices for each Group
+  group_corr_plist <- reactive({
+    if (input$testme) {}
+    else{
+      validate(
+        need(input$file1, "Please provide a file in the Upload Tab") %then%
+        need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
+    }
+
+    validate(
+      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+    )
+    corr_list2 = input$sig_select
+
+    groupings = new_group_names()
+    grouping_nums = group_dims()
+
+    group_titles = c()
+    for (i in 1:length(groupings)) {
+      title = groupings[i]
+      reps = grouping_nums[i]
+      title_rep = rep(title, reps)
+      group_titles = c(group_titles, title_rep)
+    }
+
+    group_titles_uniq = unique(group_titles)
+
+    corr_mat_list=list()
+    for (j in 1:input$numInputs){
+
+      gfam_DF1 = acc_full()
+      col_num = ncol(gfam_DF1)
+      row_num = nrow(gfam_DF1)
+      reorder_samps = gfam_DF1[,2:col_num]
+      reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
+      header_DF = gfam_DF1[,1]
+
+      gfam_DF = cbind(header_DF, reorder_samps)
+      samp_paths = gfam_DF
+      #samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
+
+      #heyo = samp_paths[grep(paste(corr_list2, collapse = '|'), samp_paths$Gene_Family), ]
+      heyo <- subset(samp_paths, header_DF %in% corr_list2)
+      colnames(heyo)[1] = "Feature"
+
+      col = (ncol(samp_paths))-1
+      row = nrow(heyo)
+
+      heyo_small<-heyo
+      rownames(heyo_small) = heyo$Feature
+      heyo_small = heyo_small[,-1]
+
+      heyo_side = data.frame(t(heyo_small))
+      colnames(heyo_side) = rownames(heyo_small)
+
+      heyo_side$Group = group_titles
+      heyo_side_real = subset(heyo_side, Group == group_titles_uniq[j], select = -c(Group))
+
+
+      library(psych)
+      hah2 = corr.test(heyo_side_real, method = "spearman")
+
+      corr_mat = as.matrix(hah2$r)
+      rownames(corr_mat) = paste(1:nrow(corr_mat))
+      colnames(corr_mat) = paste(1:ncol(corr_mat))
+
+      corr_mat_list[[j]] <- corr_mat
+    }
+    corr_mat_list
+  })
+
+  # Generate list of correlation significance symbols for each group
+  group_sym_plist <- reactive({
+    if (input$testme) {}
+    else{
+      validate(
+        need(input$file1, "Please provide a file in the Upload Tab") %then%
+        need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
+    }
+
+    validate(
+      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+    )
+    corr_list2 = input$sig_select
+
+    groupings = new_group_names()
+    grouping_nums = group_dims()
+
+    group_titles = c()
+    for (i in 1:length(groupings)) {
+      title = groupings[i]
+      reps = grouping_nums[i]
+      title_rep = rep(title, reps)
+      group_titles = c(group_titles, title_rep)
+    }
+
+    group_titles_uniq = unique(group_titles)
+
+    sym_mat_list=list()
+    for (j in 1:input$numInputs){
+
+      gfam_DF1 = acc_full()
+      col_num = ncol(gfam_DF1)
+      row_num = nrow(gfam_DF1)
+      reorder_samps = gfam_DF1[,2:col_num]
+      reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
+      header_DF = gfam_DF1[,1]
+
+      gfam_DF = cbind(header_DF, reorder_samps)
+      samp_paths = gfam_DF
+      #samp_paths = gfam_DF[apply(gfam_DF==0,1,sum)<=(0.90*length(group_names())),]
+      #samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
+
+      #heyo = samp_paths[grep(paste(corr_list2, collapse = '|'), samp_paths$Gene_Family), ]
+      
+      heyo <- subset(samp_paths, header_DF %in% corr_list2)
+      colnames(heyo)[1] = "Feature"
+
+      col = (ncol(samp_paths))-1
+      row = nrow(heyo)
+
+      heyo_small <- heyo
+      rownames(heyo_small) = heyo$Feature
+      heyo_small = heyo_small[,-1]
+
+      heyo_side = data.frame(t(heyo_small))
+      colnames(heyo_side) = rownames(heyo_small)
+
+      heyo_side$Group = group_titles
+      heyo_side_real = subset(heyo_side, Group == group_titles_uniq[j], select = -c(Group))
+
+
+      library(psych)
+      hah2 = corr.test(heyo_side_real, method = "spearman")
+
+
+      corr_mat = as.matrix(hah2$r)
+      rownames(corr_mat) = paste(1:nrow(corr_mat))
+      colnames(corr_mat) = paste(1:ncol(corr_mat))
+
+      orig_p = hah2$p
+      orig_p[col(orig_p) == row(orig_p) | upper.tri(orig_p)] <- NA
+      new_ps = p.adjust(orig_p, method = "BH", n = length(orig_p))
+      new_p_mat = matrix(new_ps, ncol = ncol(orig_p), nrow = nrow(orig_p))
+
+      new_p_mat[upper.tri(new_p_mat)] = t(new_p_mat)[upper.tri(new_p_mat)]
+      diag(new_p_mat) = rep(1,nrow(new_p_mat))
+
+      p_list = c(new_p_mat)
+      p_dims = dim(new_p_mat)
+
+      sym_list = c()
+      for (i in p_list){
+        if (is.na(i)){
+          sym = ""
+        }
+        else {
+          if (i > 0){
+            sym = ""
+            if (i < 0.05){
+              sym = "*"
+              if (i<0.01){
+                sym = "**"
+                if(i<0.001){
+                  sym = "***"
+                }
+              }
+            }
+          }
+        }
+        sym_list = c(sym_list, sym)
+      }
+
+      sym_mat = matrix(sym_list, ncol = p_dims[1], nrow = p_dims[2])
+      sym_mat_list[[j]] <- sym_mat
+    }
+    sym_mat_list
+  })
+
+
+  output$sig_message <- renderText({
+    paste("* = p < 0.05", "** = p < 0.01", "*** = p < 0.001", sep='\n')
+  })
+
+  # Generate Table of Selected Gene Families
+  corr_label_table <- reactive({
+    if (input$testme) {}
+    else{
+      validate(
+        need(input$file1, "") %then%
+        need(unlist(grouped_samps()), ""))
+    }
+
+    validate(
+      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+    )
+
+    Gene_Families = actual_corr_names()
+    nums = length(Gene_Families)
+    Label = paste(1:nums)
+    Label_Matrix = data.frame(Gene_Families, Label)
+    #print(Label_Matrix)
+    Label_Matrix
+  })
+
+  output$corr_labels <- renderTable({
+    corr_label_table()
+  })
+
+  output$corr_table_download <- downloadHandler(
+    filename = function() { paste("correlation_sample_key", '.txt', sep='') },
+    content = function(file) {
+      corr_tab = corr_label_table()
+      corr_tab2 = data.frame(corr_tab)
+      write.table(corr_tab2, file, row.names = FALSE, sep = '\t', quote = FALSE)
+    }
+  )
+
+  observeEvent({
+    new_group_names()
+    input$sig_select
+    }, {
+    if (input$testme) {
+      validate(
+        need(length(group_dims())==4, "")
+      )
+    }
+    else{
+      validate(
+        need(input$file1, "")
+      )
+    }
+
+    if (input$numInputs > 1) {
+      #checker = input$sig_select
+      #display_name = group_names()
+      output$group_corrs <- renderUI({ get_plot_output_list(max_plots,
+                                                            input$numInputs,
+                                                            group_corr_plist(),
+                                                            group_sym_plist(),
+                                                            new_group_names())
+      })
+    }
+  })
+
+
+  # Download full correlation heatmap
+  output$corr_download <- downloadHandler(
+    filename = function() { paste("all_gene_family_correlation", '.png', sep='') },
+    content = function(file) {
+      png(file, width = 25, height = 20, units ='cm', res = 300)
+      corr_list = input$sig_select
+
+      gfam_DF1 = acc_full()
+      col_num = ncol(gfam_DF1)
+      row_num = nrow(gfam_DF1)
+      reorder_samps = gfam_DF1[,2:col_num]
+      reorder_samps = reorder_samps[,c(unlist(grouped_samps()))]
+      header_DF = gfam_DF1[,1]
+
+      gfam_DF = cbind(header_DF, reorder_samps)
+      samp_paths = gfam_DF
+      #samp_paths = gfam_DF[apply(gfam_DF==0,1,sum)<=(0.90*length(group_names())),]
+      #samp_paths$Gene_Family = paste(" ", samp_paths$Gene_Family, " ", sep="")
+
+
+      #heyo = samp_paths[grep(paste(corr_list, collapse = '|'), samp_paths$Gene_Family), ]
+      
+      heyo <- subset(samp_paths, header_DF %in% corr_list)
+      colnames(heyo)[1] = "Feature"
+
+      col = (ncol(samp_paths))-1
+      row = nrow(heyo)
+
+      heyo_small<-heyo
+      rownames(heyo_small) = heyo$Feature
+      heyo_small = heyo_small[,-1]
+
+      heyo_side = data.frame(t(heyo_small))
+      colnames(heyo_side) = rownames(heyo_small)
+
+      library(psych)
+      hah2 = corr.test(heyo_side, method = "spearman")
+
+
+      corr_mat = as.matrix(hah2$r)
+      rownames(corr_mat) = paste(1:nrow(corr_mat))
+      colnames(corr_mat) = paste(1:ncol(corr_mat))
+
+      orig_p = hah2$p
+      orig_p[col(orig_p) == row(orig_p) | upper.tri(orig_p)] <- NA
+      new_ps = p.adjust(orig_p, method = "BH", n = length(orig_p))
+      new_p_mat = matrix(new_ps, ncol = ncol(orig_p), nrow = nrow(orig_p))
+
+      new_p_mat[upper.tri(new_p_mat)] = t(new_p_mat)[upper.tri(new_p_mat)]
+      diag(new_p_mat) = rep(1,nrow(new_p_mat))
+      #new_p_dat = data.frame(new_p_mat)
+
+      p_list = c(new_p_mat)
+      p_dims = dim(new_p_mat)
+
+      sym_list = c()
+      for (i in p_list){
+        if (is.na(i)){
+          sym = ""
+        }
+        else {
+          if (i > 0){
+            sym = ""
+            if (i < 0.05){
+              sym = "*"
+              if (i<0.01){
+                sym = "**"
+                if(i<0.001){
+                  sym = "***"
+                }
+              }
+            }
+          }
+        }
+        sym_list = c(sym_list, sym)
+      }
+
+      sym_mat = matrix(sym_list, ncol = p_dims[1], nrow = p_dims[2])
+
+      library(gplots)
+      my_palette <-colorRampPalette(c("blue", "white", "red"))(n=100)
+      corr_mat[is.na(corr_mat)] <- 0
+      v <- heatmap.2(corr_mat,
+                     cellnote = sym_mat, notecol="black",
+                     main="Correlation Values across \nAll Samples", #heatmap title
+                     density.info="none",
+                     #key = TRUE,
+                     #keysize = 1.0,
+                     breaks = seq(-1, 1, by = 0.02),
+                     col=my_palette,
+                     dendrogram="both",
+                     margins=c(5,5),
+                     cexRow=1,
+                     cexCol=1.2,
+                     trace=c("none"),
+                     na.color="gray60"
+      )
+      v
+      dev.off()
+    }
+  )
+
+  ## UI Elements for downloading group correlation ##
+
+  output$group_download <- renderUI({
+    lapply(1:input$numInputs, function(i) {
+      display_name = new_group_names()
+      downloadButton(paste0("downloadData", i), paste("Download", display_name[i], sep=" "))
+    })
+  })
+
+  observe({
+    lapply(1:input$numInputs, function(i) {
+      output[[paste0("downloadData", i)]] <- downloadHandler(
+        filename = function() { paste(new_group_names()[i], "_correlation", '.png', sep='') },
+        content = function(file) {
+          png(file, width = 25, height = 20, units ='cm', res = 300)
+          download_plot_output_list(max_plots,
+                                    1,
+                                    group_corr_plist()[i],
+                                    group_sym_plist()[i],
+                                    new_group_names()[i])
+          dev.off()
+        }
+      )
+    })
+  })
   
 }
