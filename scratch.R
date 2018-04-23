@@ -1165,6 +1165,9 @@ colorer <- plot_ly(
 ) #%>%
   #layout(yaxis = ax, xaxis = ax)
 
+pdf("check_it.pdf")
+print(colorer)
+dev.off()
 
   
 for (i in 2:length(uniq_names)){
@@ -1398,4 +1401,107 @@ cc$order
 
 cc <- data.frame(clr(x))
 unlist(cc)
+
 heatmap.3(data.matrix(cc))
+
+
+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
+#
+######### deseq2 concerns
+
+##### differential taxa play
+setwd("/Users/jcooperdevlin/Desktop/Kelly/wham_revisions3.28")
+library(data.table)
+library(metagenomeSeq)
+source("/Users/jcooperdevlin/Desktop/Itai/ST_app/heater3/R/heatmap.3.R")
+library(viridis)
+library(ggplot2)
+library(randomcoloR)
+
+ebi_df <- fread("ERP104179_IPR_abundances_v4.1.tsv", header=T, sep='\t')
+
+ebi_counts <- data.frame(ebi_df[,-1])
+ebi_counts <- data.frame(ebi_counts[,-1])
+rownames(ebi_counts) <- ebi_df$Feature
+
+ebi_counts[is.na(ebi_counts)]
+
+g_maker <- hclust(dist(t(ebi_counts)))
+plot(g_maker)
+
+ord = colnames(ebi_counts)[g_maker$order]
+
+ebi_order <- data.frame(ebi_counts)[,ord]
+
+ebi_relab <- sweep(ebi_order, 2, colSums(ebi_order), '/')
+rownames(ebi_relab) <- rownames(ebi_counts)
+
+
+
+####get the right groups
+
+
+
+
+
+
+#
+#
+#
+#
+#
+#
+#
+## colorer with one group
+series_mat <- rep(1, 20)
+
+names(series_mat) <- rep("Group1", 20)
+#series_mat <- t(series_mat)
+series_mat[series_mat==0] <- NA
+
+#cols_cols <- randomColor(length(uniq_names))
+
+g1 = t(as.matrix(series_mat))
+g1col <- data.frame(x = c(0,1), y = c('red', 'red'))
+colnames(g1col) <- NULL
+
+ax <- list(
+  title = "",
+  zeroline = FALSE,
+  showline = FALSE,
+  showticklabels = FALSE,
+  tickcolor = 'white',
+  showgrid = FALSE
+)
+
+colorer <- plot_ly(
+  type = "heatmap"
+) %>% add_trace(
+  x=1:20,
+  z = g1,
+  colorscale = g1col, showscale = F,
+  hoverinfo = 'all'
+) %>%
+  layout(yaxis = ax, xaxis = ax)
+}
+colorer
+
+
+
+
+
+#####
+
+

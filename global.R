@@ -14,10 +14,10 @@ library(randomcoloR)
 library(gplots)
 library(tidyr)
 library(dplyr)
-library(DESeq2)
+#library(DESeq2)
 library(viridis)
-library(compositions)
 library(matrixStats)
+library(webshot)
 
 ## ggplot legend extract
 g_legend<-function(a.gplot){
