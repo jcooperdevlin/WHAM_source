@@ -54,7 +54,7 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                        uiOutput("group_pre")
                                      ),
                                     mainPanel(
-                                   fluidRow(
+                                   fluidPage(
                                      h4("Group Selection"),
                                      textOutput("tutorialGroup"),
                                      tags$head(tags$style(
@@ -62,6 +62,8 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                      textOutput("group_warning"),
                                      tags$head(tags$style(
                                        "#group_warning{color: red; font-size: 18px}")),
+                                     fluidRow(uiOutput("key0")),
+                                     downloadButton("legend_download", "Download Legend"),
                                      # place to hold dynamic inputs
                                      uiOutput("inputGroup"))
                                    )
@@ -72,8 +74,8 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                  tabPanel("Explore Taxa",
                                           mainPanel(
                                                fluidRow(column(4, sliderInput("taxaDims", 
-                                                                     "Taxa Level", value = 2, 
-                                                                     min=1, max = 2, step = 1)),
+                                                                     "Taxa Level", value = 6, 
+                                                                     min=6, max = 7, step = 1)),
                                                         column(4, sliderInput("taxa_limit",
                                                                               "Taxa Proportions",
                                                                               1, min = 0, max = 1, step = 0.05,
@@ -93,7 +95,7 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                                width = 11)),
                                                #fluidRow(tableOutput("da_taxa_labs")),
                                                #width = 11)),
-                                 tabPanel("Explore Genes",
+                                 tabPanel("Explore Features",
                                           mainPanel(
                                             textOutput("instructions"),
                                             fluidRow(uiOutput("feat_selectors")),
@@ -117,7 +119,7 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                         )),
                  tabPanel("Query Your Data",
                           tabsetPanel(
-                            tabPanel("Gene Search",
+                            tabPanel("Feature Search",
                                      fluidRow(column(4,
                                                      selectizeInput('acc_list', choices=NULL,
                                                                     label = h3("Select a Feature"),
@@ -141,24 +143,18 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                                                                    "Download Legend")))),
                                        fluidRow(column(7, uiOutput("select_feat_stat_ui")))
                                        )
-                                     # fluidRow(downloadButton("expression_download", "Download Plot")),
-                                     # #h5("Pairwise T-test results are performed here if at least 2 groups are selected"),
-                                     # fluidRow(column(8,uiOutput("exp_heat"))),
-                                     # fluidRow(uiOutput("exp_heat_download")),
-                                     # fluidRow(column(6, align= "center", tableOutput("exp_table"))),
-                                     # fluidRow(downloadButton("expression_table_download", "Download Table"))
                             ),
     
                             tabPanel("Correlation", selectizeInput('sig_select', choices=NULL,
                                                                    label = h3("Begin by selecting two Features"),
                                                                    multiple = TRUE),
-                                     fluidPage(column(4, verbatimTextOutput("sig_message"))),
+                                     fluidRow(column(4, verbatimTextOutput("sig_message"))),
                                      fluidPage(column(10, plotOutput("corr_plot"))),
                                      fluidRow(downloadButton("corr_download", "Download Plot")),
                                      fluidPage(column(10, uiOutput("group_corrs"))),
-                                     fluidPage(uiOutput("group_download")),
+                                     fluidRow(uiOutput("group_download")),
                                      fluidPage(column(10, tableOutput("corr_labels"))),
-                                     fluidPage(downloadButton("corr_table_download", "Download Labels")))
+                                     fluidRow(downloadButton("corr_table_download", "Download Labels")))
                             )
                           ),
                         tabPanel(title = loadingLogo("https://www.youtube.com/watch?v=pIgZ7gMze7A", "wham_logo_trans.png",

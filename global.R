@@ -18,6 +18,7 @@ library(dplyr)
 library(viridis)
 library(matrixStats)
 library(webshot)
+library(ALDEx2)
 
 ## ggplot legend extract
 g_legend<-function(a.gplot){
@@ -817,4 +818,46 @@ scale_fill_viridis <- function (..., alpha=1, discrete=TRUE) {
   } else {
     scale_fill_gradientn(colours = viridis(256, alpha), ...)
   }
+}
+
+
+
+##plotly
+custom_export <- function (p = last_plot(), file = "plotly.png", selenium = NULL, 
+          ...) 
+{
+  fileType <- tolower(tools::file_ext(file))
+  if (!fileType %in% c("jpeg", "png", "webp", "svg", "pdf")) {
+    stop("File type ", fileType, " not supported", call. = FALSE)
+  }
+  if (is.webgl(p) && fileType %in% "pdf") {
+    stop("A personal (or professional) plan is required to export WebGL to pdf:\\n", 
+         "https://plot.ly/products/cloud/", call. = FALSE)
+  }
+  use_webshot <- !is.webgl(p) && fileType %in% c("jpeg", "png", 
+                                                 "pdf")
+  if (!use_webshot) {
+    cmd <- sprintf("function(el, x) {\\n        var gd = document.getElementById(el.id); \\n        Plotly.downloadImage(gd, {format: '%s', width: %s, height: %s, filename: '%s'});\\n      }", 
+                   fileType, p$width %||% p$layout$width %||% 800, p$height %||% 
+                     p$layout$height %||% 600, tools::file_path_sans_ext(file))
+    p <- htmlwidgets::onRender(p, cmd)
+  }
+  f <- basename(tempfile("plotly", ".", ".html"))
+  on.exit(unlink(f), add = TRUE)
+  html <- htmlwidgets::saveWidget(p, f)
+  if (use_webshot) {
+    try_library("webshot", "export")
+    return(webshot::webshot(f, file, ...))
+  }
+  if (inherits(selenium, "rsClientServer")) {
+    selenium$client$navigate(paste0("file://", normalizePath(f)))
+  }
+  else {
+    stop("Must provide an object of class 'rsClientServer' to the `selenium` ", 
+         "argument to export this plot (see examples section on `help(export)`)", 
+         call. = FALSE)
+  }
+  message(sprintf("Success! Check your downloads folder for a file named: '%s'", 
+                  file))
+  invisible(file)
 }

@@ -1104,7 +1104,10 @@ p2 <- subplot(style(taxa_plotly, showlegend = FALSE),
               heights = c(0.2, 0.8))
 p2
 
+p2$width = 1400
+p2$height = 1000
 
+export(p2, "file.png")
 
 
 ##### make fake color bar to add to the plotly object!
@@ -1191,6 +1194,15 @@ p3 <- subplot(colorer,
 p3
 
 
+
+### 
+cc <- g_legend(gTaxa)
+plot(cc)
+
+class(p3)
+class(cc)
+
+class(gTaxa)
 
 
 
@@ -1504,4 +1516,164 @@ colorer
 
 #####
 
+
+
+
+#
+#
+#
+#
+#### all zero matrix play
+
+mat <- rbind(c(NA, 0, 0),
+             c(0,NA,0),
+             c(0,0,NA))
+if (sum(mat, na.rm = T) == 0){
+  mat[1,2] = 1e-7
+}
+heatmap.3(mat)
+
+
+
+
+#
+#
+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+######
+#
+#
+#
+#
+###### ALDEX tests and estimating HUMANN2 relab for count data!!!!
+setwd("/Users/jcooperdevlin/Desktop/Kelly/wham_revisions3.28")
+library(data.table)
+source("/Users/jcooperdevlin/Desktop/Itai/ST_app/heater3/R/heatmap.3.R")
+library(viridis)
+library(ggplot2)
+library(randomcoloR)
+
+
+go_df <- fread("Relab_go_names_wham.tsv", header=T, sep='\t')
+go_nums <- go_df[,4:50]
+
+total_reads_df <- read.table("raw_reads.csv", header=T, sep='\t')[,-1]
+total_reads_df$Sample <- gsub(".fastq", "_Abundance.RPKs", total_reads_df$Sample)
+
+rownames(total_reads_df) = total_reads_df$Sample
+total_reads_df <- total_reads_df[colnames(go_nums),]
+total_reads_df <- t(total_reads_df$Total_Reads)
+
+go_count_est <- sweep(go_nums, 2, total_reads_df, "*")
+go_count_est <- round(go_count_est, 0)
+
+go_count_est2 <- cbind(go_df[,1:3], go_count_est)
+write.table(go_count_est2, "HMP_count_est_go_names_wham.tsv", row.names=F, sep='\t',
+            quote=F)
+
+### try aldex stats
+feat_df <- aggregate(go_count_est, list(go_df$Taxa), sum)
+
+feat_nums <- feat_df[,2:48]
+rownames(feat_nums) <- feat_df[,1]
+
+arm = c("SRR532024_Abundance.RPKs", "SRR532015_Abundance.RPKs", "SRR532006_Abundance.RPKs",
+        "SRR532040_Abundance.RPKs", "SRR532504_Abundance.RPKs", "SRR532507_Abundance.RPKs",
+        "SRR638753_Abundance.RPKs", "SRR640357_Abundance.RPKs", "SRR640340_Abundance.RPKs",
+        "SRR640452_Abundance.RPKs", "SRR640499_Abundance.RPKs", "SRR545546_Abundance.RPKs")
+vag = c("SRR062353_Abundance.RPKs", "SRR062357_Abundance.RPKs", "SRR062301_Abundance.RPKs",
+        "SRR062276_Abundance.RPKs", "SRR1804686_Abundance.RPKs", "SRR1804628_Abundance.RPKs",
+        "SRR514191_Abundance.RPKs", "SRR514180_Abundance.RPKs", "SRR513168_Abundance.RPKs",
+        "SRR514231_Abundance.RPKs", "SRR513448_Abundance.RPKs")
+sal = c("SRR062435_Abundance.RPKs", "SRR062441_Abundance.RPKs", "SRR062389_Abundance.RPKs",
+        "SRR062413_Abundance.RPKs", "SRR062402_Abundance.RPKs", "SRR062396_Abundance.RPKs",
+        "SRR346673_Abundance.RPKs", "SRR346681_Abundance.RPKs", "SRR062371_Abundance.RPKs",
+        "SRR062372_Abundance.RPKs", "SRR062462_Abundance.RPKs", "SRR062415_Abundance.RPKs")
+sto = c("SRR528423_Abundance.RPKs", "SRR528353_Abundance.RPKs", "SRR528300_Abundance.RPKs",
+        "SRR528261_Abundance.RPKs", "SRR528183_Abundance.RPKs", "SRR528155_Abundance.RPKs",
+        "SRR532178_Abundance.RPKs", "SRR532183_Abundance.RPKs", "SRR532190_Abundance.RPKs",
+        "SRR532191_Abundance.RPKs", "SRR533152_Abundance.RPKs", "SRR533153_Abundance.RPKs")
+
+orderer <- c(arm, vag, sal, sto)
+
+
+feat_new <- feat_nums[,orderer]
+
+arm_vag <- feat_new[,24:47]
+
+library(ALDEx2)
+
+conds <- c(rep("arm", 12), rep("vag", 11), rep("sal", 12), rep("sto", 12))
+#x <- aldex.clr(feat_new, conds, mc.samples=16, verbose=TRUE)
+
+#x.glm <- aldex.glm(x, conds)
+
+combos <- combn(unique(conds), 2)
+stat_results = data.frame(we.ep = NA, we.eBH = NA, wi.ep = NA, wi.eBH = NA,
+                          rab.all = NA, rab.win.a = NA, rab.win.b = NA,
+                          diff.btw = NA, diff.win = NA, effect = NA, overlap = NA,
+                          Int = NA, Feature = NA)
+for (i in 1:ncol(combos)){
+  ab <- combos[,i]
+  a <- ab[1]
+  b <- ab[2]
+  a_sel = which(conds == a)
+  b_sel = which(conds == b)
+  
+  feat_subset <- cbind(feat_new[,a_sel], feat_new[,b_sel])
+  cond_subset <- c(conds[a_sel], conds[b_sel])
+  
+  x <- aldex.clr(feat_subset2, cond_subset, mc.samples=16, verbose=TRUE)
+  #x.glm <- aldex.glm(x, cond_subset)
+  x.tt <- aldex.ttest(x, cond_subset, paired.test = F)
+  x.effect <- aldex.effect(x, cond_subset, include.sample.summary=FALSE, verbose=TRUE)
+  x.all <- data.frame(x.tt, x.effect, stringsAsFactors=FALSE)
+  x.all$Int <- rep(paste0(a,"_", b), nrow(x.all))
+  x.all$Feature <- rownames(x.all)
+  names(x.all) = names(stat_results)
+  stat_results <- rbind(stat_results, x.all)
+}
+
+
+aldex.plot(x.all, type="MA", test="welch")
+
+aldex.plot(x.all, type="MW", test="welch")
+
+
+
+##
+#
+#######
+haves <- c("arm-vag", "arm-sal", "arm-sto", "sal-sto")
+total <- c("arm-vag", "arm-sal", "arm-sto", "vag-sal", "vag-sto", "sal-sto")
+
+setdiff(total, haves)
 
