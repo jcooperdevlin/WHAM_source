@@ -87,7 +87,7 @@ server <- function(input, output, session) {
     if (input$testme) {
       start_col = 4
       #full_file <- fread("sample_input2.tsv", header=TRUE, sep=input$sep)
-      full_file_feature <- fread("HMP_count_est_go_names_wham.tsv", header=TRUE, sep=input$sep) ##temp test
+      full_file_feature <- fread("HMP_count_est_go_names_wham.tsv", header=TRUE, sep='\t') ##temp test
     }
     else {
       if (input$input_type == "Biobakery"){
@@ -96,7 +96,7 @@ server <- function(input, output, session) {
         if (is.null(inFile)) {
           return(NULL)}
         full_file <- try(
-          {fread(inFile$datapath, header=TRUE, sep=input$sep)})
+          {fread(inFile$datapath, header=TRUE, sep='\t')})
         
         correct_cols <- c("Acc", "Feature", "Taxa")
         validate(
@@ -106,13 +106,13 @@ server <- function(input, output, session) {
         
         nums <- data.matrix(full_file[,start_col:ncol(full_file)])
         rownames(nums) <- rownames(full_file)
-        if (input$filter_level == 0){
-          full_file <- full_file
-        }
-        else{
-          keep_rows = rownames((nums[apply(nums==0,1,sum)<=input$filter_level*ncol(nums),]))
-          full_file <- full_file[as.numeric(keep_rows),]
-        }
+        # if (input$filter_level == 0){
+        #   full_file <- full_file
+        # }
+        # else{
+        #   keep_rows = rownames((nums[apply(nums==0,1,sum)<=input$filter_level*ncol(nums),]))
+        #   full_file <- full_file[as.numeric(keep_rows),]
+        # }
         full_file <- subset(full_file, Feature != "NO_NAME")
         
         full_file$Feature <- gsub("[^[:alnum:]']", "_", full_file$Feature)
@@ -127,7 +127,7 @@ server <- function(input, output, session) {
         if (is.null(inFile_feature)) {
           return(NULL)}
         full_file_feature <- try(
-          {fread(inFile_feature$datapath, header=TRUE, sep=input$sep)})
+          {fread(inFile_feature$datapath, header=TRUE, sep='\t')})
         
         correct_cols <- c("Acc", "Feature")
         validate(
@@ -135,20 +135,13 @@ server <- function(input, output, session) {
             need(all(colnames(full_file_feature)[1:2]==correct_cols), paste0("The input file provided is not an appropriate format. Please view the sample input file provided in the Home Tab."))
         )
         
-        nums <- data.matrix(full_file_feature[,start_col:ncol(full_file_feature)])
-        
-        nums_relab <- sweep(nums, 2, colSums(nums), '/')
-        rownames(nums_relab) <- rownames(full_file_feature)
-        
-        full_file_feature <- cbind(full_file_feature[,1:(start_col-1)], nums_relab)
-        
-        if (input$filter_level == 0){
-          full_file_feature <- full_file_feature
-        }
-        else{
-          keep_rows = rownames((nums_relab[apply(nums_relab==0,1,sum)<=input$filter_level*ncol(nums_relab),]))
-          full_file_feature <- full_file_feature[as.numeric(keep_rows),]
-        }
+        # nums <- data.matrix(full_file_feature[,start_col:ncol(full_file_feature)])
+        # 
+        # nums_relab <- sweep(nums, 2, colSums(nums), '/')
+        # rownames(nums_relab) <- rownames(full_file_feature)
+        # 
+        # full_file_feature <- cbind(full_file_feature[,1:(start_col-1)], nums_relab)
+        # 
         full_file_feature <- subset(full_file_feature, Feature != "NO_NAME")
         
         full_file_feature$Feature <- gsub("[^[:alnum:]']", "_", full_file_feature$Feature)
@@ -168,7 +161,7 @@ server <- function(input, output, session) {
       if (is.null(inFile_taxa)) {
         return(NULL)}
     full_file <- try(
-      {fread(inFile_taxa$datapath, header=TRUE, sep=input$sep)})
+      {fread(inFile_taxa$datapath, header=TRUE, sep='\t')})
     
     correct_cols <- c("Taxa")
     validate(
@@ -176,11 +169,11 @@ server <- function(input, output, session) {
         need(all(colnames(full_file)[1]==correct_cols), paste0("The input file provided is not an appropriate format. Please view the sample input file provided in the Home Tab."))
     )
     
-    nums <- data.matrix(full_file[,start_col:ncol(full_file)])
-    nums <- sweep(nums, 2, colSums(nums), '/')
-    rownames(nums) <- rownames(full_file)
-    
-    full_file <- cbind(full_file[,1:(start_col-1)], nums)
+    # nums <- data.matrix(full_file[,start_col:ncol(full_file)])
+    # nums <- sweep(nums, 2, colSums(nums), '/')
+    # rownames(nums) <- rownames(full_file)
+    # 
+    # full_file <- cbind(full_file[,1:(start_col-1)], nums)
     
     full_file <- subset(full_file, Taxa != "NO_NAME")
     
@@ -220,19 +213,112 @@ server <- function(input, output, session) {
     full_file_show
   })
   
+  output$temp_info1 <- renderUI({
+    if (input$input_type == "Biobakery"){
+      m1 <- c("Biobakery format requires an output file from the Biobakery HUMANn2 Tool")
+      m2 <- c("'Features' in the below format can be Gene Families, Pathways or GO Terms")
+      m3 <- c("For formatting help please see the sample input on the Home Tab")
+      m4 <- c("Please ensure the first three columns are labeled 'Acc', 'Feature', 'Taxa'")
+      
+      HTML(paste('<br/>', m1, m2, m3, m4, '<br/>', sep = '<br/>'))
+    } else if (input$input_type == "EBI"){
+      m1 <- c("EBI format requires 2 inputs") 
+      m2 <- c("Feature input requires an output file from the EBI Metagenomics Pipeline")
+      m3 <- c("'Features' in the below format are typically Interpro Identifiers")
+      m4 <- c("Please ensure the first two columns are labeled 'Acc', 'Feature'")
+      
+      HTML(paste('<br/>', m1, m2, m3, m4, '<br/>', sep = '<br/>'))
+    }
+  })
+  
+  output$temp_info2 <- renderUI({
+    m5 <- c("Taxa input requires the EBI taxonomic output in the below format")
+    m6 <- c("Please ensure the first column is labeled 'Taxa'")
+    
+    HTML(paste('<br/>', m5, m6, sep = '<br/>'))
+  })
+  
+  output$temp_df <- renderDataTable({
+    if (input$input_type == "Biobakery"){
+      Acc <- paste0("0000", 1:5)
+      Feature <- paste0("Feature", 1:5)
+      Taxa <- c(paste0("Bug", 1:3), paste0("Bug", 1:2))
+      num_mat <- matrix(NA,5,5)
+      for (i in 1:ncol(num_mat)){
+        num_mat[,i] <- sample(1000,5)
+      }
+      colnames(num_mat) = paste0("Sample", 1:5)
+      sample_df <- cbind(Acc, Feature, Taxa, num_mat)
+    }
+    else if (input$input_type == "EBI"){
+      Acc <- paste0("0000", 1:5)
+      Feature <- paste0("Feature", 1:5)
+      num_mat <- matrix(NA,5,5)
+      for (i in 1:ncol(num_mat)){
+        num_mat[,i] <- sample(1000,5)
+      }
+      colnames(num_mat) = paste0("Sample", 1:5)
+      sample_df <- cbind(Acc, Feature, num_mat)
+    }
+    sample_df
+  })
+  
+  output$temp_taxa <- renderDataTable({
+    Taxa <- c(paste0("Bug", 1:3), paste0("Bug", 1:2))
+    num_mat <- matrix(NA,5,5)
+    for (i in 1:ncol(num_mat)){
+      num_mat[,i] <- sample(1000,5)
+    }
+    colnames(num_mat) = paste0("Sample", 1:5)
+    sample_df <- cbind(Taxa, num_mat)
+    sample_df
+  })
+  
   observe({
     if (input$input_type == "Biobakery"){
-      output$preview_shower <- renderUI({
-        dataTableOutput('contents')
-      })
+      if (input$testme){
+        output$preview_shower <- renderUI({
+          dataTableOutput('contents')
+        })
+      }
+      else if(!is.null(input$file1)){
+        output$preview_shower <- renderUI({
+          dataTableOutput('contents')
+        })
+      }
+      else if(is.null(input$file1)){
+        output$preview_shower <- renderUI({
+          fluidPage(fluidRow(
+            uiOutput('temp_info1'),
+            tags$head(tags$style(
+              "#temp_info1{color: #df691a; font-size: 18px}")),
+            dataTableOutput('temp_df')
+          ))
+        })
+      }
     }
     if (input$input_type == "EBI"){
-      output$preview_shower <- renderUI({
-        fluidRow(
-          dataTableOutput('contents'),
-          dataTableOutput('contents_taxa')
-        )
-      })
+      if (!is.null(input$features1)){
+        output$preview_shower <- renderUI({
+          fluidRow(
+            dataTableOutput('contents'),
+            dataTableOutput('contents_taxa'))
+        })
+      }
+      else{
+        output$preview_shower <- renderUI({
+          fluidPage(fluidRow(
+            uiOutput('temp_info1'),
+            tags$head(tags$style(
+              "#temp_info1{color: #df691a; font-size: 18px}")),
+            dataTableOutput('temp_df'),
+            uiOutput('temp_info2'),
+            tags$head(tags$style(
+              "#temp_info2{color: #df691a; font-size: 18px}")),
+            dataTableOutput('temp_taxa')
+          ))
+        })
+      }
     }
   })
   
@@ -245,16 +331,18 @@ server <- function(input, output, session) {
   ### Generate prerequisites for plotting
 
   # Generate dataframe collapsed by Gene Family
-  acc_full <- reactive({
+  acc_pre_filt <- reactive({
     full_file <- full_file_feature()
     col_num <- ncol(full_file)
     if (input$testme){
       start_col = 4
       
       DT <- data.frame(full_file[,start_col:col_num], check.names = F)
+      
       DT2 <- aggregate(DT, list(full_file$Feature), sum)
       colnames(DT2)[1] = "Feature"
       DT2 = subset(DT2, Feature != "filler")
+      
       DT2
     } else {
       if (input$input_type == "Biobakery"){
@@ -264,6 +352,7 @@ server <- function(input, output, session) {
         DT2 <- aggregate(DT, list(full_file$Feature), sum)
         colnames(DT2)[1] = "Feature"
         DT2 = subset(DT2, Feature != "filler")
+
         DT2
       }
       if (input$input_type == "EBI"){
@@ -273,11 +362,24 @@ server <- function(input, output, session) {
         DT2 <- aggregate(DT, list(full_file$Feature), sum)
         colnames(DT2)[1] = "Feature"
         DT2 = subset(DT2, Feature != "filler")
+        
         DT2
       }
     }
     DT2
   })
+  
+  acc_full <- reactive({
+    DT2 <- acc_pre_filt()
+    
+    feat_var <- rowVars(as.matrix(DT2[,-1]))
+    keep_quant <- quantile(feat_var, input$filter_level)
+    keep_filt <- which(feat_var > keep_quant)
+    DT2 <- DT2[keep_filt,]
+    
+    DT2
+  })
+  
   # acc full but numeric values only
   acc_nums <- reactive({
     accs <- acc_full()
@@ -287,6 +389,33 @@ server <- function(input, output, session) {
     accs3
   })
 
+  
+  ## tell user how much was filtered
+  
+  output$filter_message1 <- renderUI({
+    m1 <- c("Filtering of low variance features is highly 
+        recommended in order to speed up differential abundance calculations.")
+    
+    HTML(paste(m1))
+  })
+  
+  output$filter_message2 <- renderUI({
+    validate(
+      need(nrow(full_file_feature()) > 0, "")
+    )
+    old <- nrow(acc_pre_filt())
+    new <- nrow(acc_full())
+    
+    m2 <- paste0("Original number of unique features: ", old)
+    m3 <- paste0("Number of unique features after filtering: ", new)
+    
+    HTML(paste('<br/>', m2, m3, '<br/>', sep = '<br/>'))
+  })
+  
+  
+  
+  
+  
   # Generate dataframe collapsed by Species
   spec_full <- reactive({
     if (input$testme){
@@ -436,7 +565,7 @@ server <- function(input, output, session) {
   output$group_pre = renderUI({
     lapply(1:input$numInputs, function(i) {
       inputName <- paste0("group", i)
-      textInput(inputName, label = "Group Prefix")
+      textInput(inputName, label = "Group Name")
     })
   })
 
@@ -1073,85 +1202,83 @@ server <- function(input, output, session) {
     }
     
     feat_plot_df = reorder_mat()
-    feat_var <- rowVars(as.matrix(feat_plot_df))
-    keep_quant <- quantile(feat_var, input$var_select)
-    keep_filt <- which(feat_var > keep_quant)
-    print(length(keep_filt))
-    feat_var2 <- feat_plot_df[keep_filt,]
+    feat_var2 <- feat_plot_df
     feat_var2
   })
   
   da_feat_stat <- reactive({
-    withProgress({
-      feat_order <- feat_mat()
-      
-      groupings = new_group_names()
-      grouping_nums = group_dims()
-      
-      feat_trans <- feat_order
-      cc <- data.frame(feat_trans)
+    feat_order <- feat_mat()
 
-      RA <- unlist(feat_order)
-      RA_clr <- unlist(cc)
-      sample_id <- rep(colnames(feat_order), each = nrow(feat_order))
-      
-      group_titles = c()
-      for (i in 1:length(groupings)) {
-        title = groupings[i]
-        reps = grouping_nums[i]
-        title_rep = rep(title, reps)
-        group_titles = c(group_titles, title_rep)
-      }
-      
-      group_titles2 = rep(group_titles, each = nrow(feat_order))
-      
-      Feature <- rep(rownames(cc), ncol(cc))
-      
-      stat_df <- data.frame(Sample = sample_id, Group = group_titles2, RA = RA,
-                            RA_clr = RA_clr, Feature = Feature)
-      
-      
-      uniq_feat <- as.character(unlist(unique(stat_df$Feature)))
-      stat_results <- data.frame(Feature = NA, F_val = NA, P_val = NA)
-      hoc_results <- data.frame(Feat = NA, Int = NA, p_adj = NA)
-      for (i in 1:length(uniq_feat)){
-        feat <- uniq_feat[i]
-        test <- subset(stat_df, Feature == feat)
-        a_test <- try(anova(lm(RA ~ Group, test)))
-        result <- data.frame(Feature = uniq_feat[i],
-                             F_val = a_test$`F value`[1],
-                             P_val = a_test$`Pr(>F)`[1])
-        stat_results <- rbind(stat_results, result)
-        if (is.na(result$P_val)){}
-        else{
-          if (result$P_val < 0.05){
-            h_test <- aov(RA ~ Group, test)
-            tk <- TukeyHSD(h_test, "Group")
-            hresult <- data.frame(Feat = rep(uniq_feat[i], ncol(combn(length(unique(test$Group)), 2))),
-                                  Int = rownames(tk$Group),
-                                  p_adj = tk$Group[,4])
-            hoc_results <- rbind(hoc_results, hresult)
-          }
-        }
-      }
-      stat_results$p_adj <- p.adjust(stat_results$P_val, method = "BH")
-      stat2 <- subset(stat_results, Feature %in% unique(hoc_results$Feat))
-      
-      stat_results <- hoc_results
-    }, message = "Calculating Differentially Abundant Features")
+    groupings = new_group_names()
+    grouping_nums = group_dims()
+    
+    feat_trans <- feat_order
+    cc <- data.frame(feat_trans)
+    
+    RA <- unlist(feat_order)
+    RA_clr <- unlist(cc)
+    sample_id <- rep(colnames(feat_order), each = nrow(feat_order))
+    
+    group_titles = c()
+    for (i in 1:length(groupings)) {
+      title = groupings[i]
+      reps = grouping_nums[i]
+      title_rep = rep(title, reps)
+      group_titles = c(group_titles, title_rep)
+    }
+    
+    conds <- group_titles
+    
+    combos <- combn(unique(conds), 2)
+    stat_results = data.frame(we.ep = NA, we.eBH = NA, wi.ep = NA, wi.eBH = NA,
+                              rab.all = NA, rab.win.a = NA, rab.win.b = NA,
+                              diff.btw = NA, diff.win = NA, effect = NA, overlap = NA,
+                              Int = NA, Feature = NA)
+    for (i in 1:ncol(combos)){
+      withProgress({
+        ab <- combos[,i]
+        a <- ab[1]
+        b <- ab[2]
+        a_sel = which(conds == a)
+        b_sel = which(conds == b)
+        
+        feat_subset <- cbind(feat_order[,a_sel], feat_order[,b_sel])
+        cond_subset <- c(conds[a_sel], conds[b_sel])
+        x <- aldex.clr(feat_subset, cond_subset, mc.samples=16, verbose=TRUE)
+        x.tt <- aldex.ttest(x, cond_subset, paired.test = F)
+        x.effect <- aldex.effect(x, cond_subset, include.sample.summary=FALSE, verbose=TRUE)
+        x.all <- data.frame(x.tt, x.effect, stringsAsFactors=FALSE)
+        x.all$Int <- rep(paste0(a,"-", b), nrow(x.all))
+        x.all$Feature <- rownames(x.all)
+        names(x.all) = names(stat_results)
+        stat_results <- rbind(stat_results, x.all)
+      }, message = paste0("Calculating Differential Abundance ", i, " of ", ncol(combos))) 
+    }
+    print(dim(stat_results))
     stat_results
   })
   
   da_feat <- reactive({
     stat_results <- da_feat_stat()
     
-    keepers <- unique(subset(stat_results, p_adj < input$feat_pval_up)$Feat)
+    keepers_df <- subset(stat_results, we.eBH < input$feat_pval_up &
+                               wi.eBH < input$feat_pval_up)
+    keepers <- unique(subset(keepers_df, effect > input$feat_effect |
+                               effect < -input$feat_effect)$Feature)
+    
     print(length(keepers))
     validate(
       need(length(keepers) > 0, "No signficant features were detected!")
     )
     keepers
   })
+  
+  #observeEvent(da_feat_stat(), {
+  #  stat_results <- da_feat_stat()
+  #  up <- max(abs(stat_results$effect), na.rm=T)
+  #  print(up)
+  #  updateSliderInput(session, "feat_effect", max = round(up,0))
+  #})
   
   gene_da_plotly <- reactive({
     if(input$numInputs > 1){
@@ -1215,11 +1342,11 @@ server <- function(input, output, session) {
                  text = plotter$groups,
                  z = plotter$Z_scored_CPM, type = "heatmap",
                  hoverinfo = 'y+text',
-                 colorbar = list(x = -0.2, 
+                 colorbar = list(x = -0.3, 
                                  xanchor = 'left',
                                  tickmode='array',
                                  tickvals = c(min(plotter$Z_scored_CPM),max(plotter$Z_scored_CPM)),
-                                 ticktext = c("low", "high"), tickfont = list(size=22))) %>%
+                                 ticktext = c("low", "high"), tickfont = list(size=18))) %>%
       layout(yaxis = ax, xaxis = ax)
     
     ####
@@ -1314,8 +1441,8 @@ server <- function(input, output, session) {
       xlab("Sample") + ylab("Relative Abundance") +
       theme(panel.background = element_blank(),
             axis.text.x = element_blank(),
-            axis.text.y = element_text(size = 18),
-            axis.title.x = element_text(size = 18))
+            axis.text.y = element_text(size = 15),
+            axis.title = element_text(size = 15))
     tax_sel
   })
   
@@ -1329,11 +1456,12 @@ server <- function(input, output, session) {
     tax_sel <- plot3_ggplot()+theme(legend.position='none')
     
     taxly <- ggplotly(tax_sel, tooltip = c('fill', 'text'))
+    taxly <- taxly %>% layout(margin=list(l = 100), yaxis=list(tickprefix=" "))
     
     
     p3 <- subplot(colorer(), taxly,
                   nrows = 2, margin = c(0,0,-0.01,0),
-                  heights = c(0.1, 0.9), shareX = T)
+                  heights = c(0.1, 0.9), shareX = T, titleY = T)
     p3
   })
 
@@ -1355,22 +1483,47 @@ server <- function(input, output, session) {
     groupings = new_group_names()
     grouping_nums = group_dims()
     
-    #### now select bug
+    #### now select feat
     
-    select_feat <- event.data$y
+    select_gfam <- event.data$y
     
     statter <- da_feat_stat()
-    statter2 <- subset(statter, Feat %in% select_feat)
+    statter2 <- subset(statter, Feature %in% select_gfam)
+    
+    total_ints <- c()
+    total_int <- combn(groupings, 2)
+    for (i in 1:ncol(total_int)){
+      int <- total_int[,i]
+      ints <- paste0(int[1], "-", int[2])
+      total_ints <- c(total_ints, ints)
+    }
+    
+    have <- statter2$Int
+    add <- setdiff(total_ints, have)
+    have_ints <- c(have, add)
+    
+    num_fill <- round(statter2$we.eBH, 4)
+    if (nrow(statter2) != ncol(combn(groupings, 2))){
+      how_short <- ncol(combn(groupings, 2)) - nrow(statter2)
+      add <- rep(NA, how_short)
+      num_fill <- c(num_fill, add)
+    }
+    
+    name_df <- data.frame(name=have_ints, num = num_fill)
+    rownames(name_df) <- name_df$name
+    name_df = name_df[total_ints,]
     
     group_num <- length(groupings)
-    group1 <- gsub('.*-', "", statter2$Int[1])
-    group_rest <- gsub("-.*", "", statter2$Int[1:(group_num-1)])
+    group1 <- gsub('-.*', "", name_df$name[1])
+    group_rest <- gsub(".*-", "", name_df$name[1:(group_num-1)])
     group_names <- c(group1, group_rest)
     
+    num_fill2 <- name_df$num
+    
     resm <- matrix(NA, group_num, group_num)
-    resm[lower.tri(resm) ] <-round(statter2$p_adj, 4)
+    resm[lower.tri(resm) ] <- num_fill2
     resm <- t(resm)
-    resm[lower.tri(resm) ] <-round(statter2$p_adj, 4)
+    resm[lower.tri(resm) ] <- num_fill2
     rownames(resm) <- group_names
     colnames(resm) <- group_names
     print(resm)
@@ -1485,14 +1638,15 @@ server <- function(input, output, session) {
       
       tax_sel <- plot3_ggplot()+theme(legend.position='none',
                                       axis.text.y = element_text(size = 18),
-                                      axis.title.x = element_text(size = 18))
+                                      axis.title = element_text(size = 18))
       
       taxly <- ggplotly(tax_sel, tooltip = c('fill', 'text'))
+      taxly <- taxly %>% layout(margin=list(l = 100), yaxis=list(tickprefix=" "))
       
       
       p3 <- subplot(colorer(), taxly,
                     nrows = 2, margin = c(0,0,-0.01,0),
-                    heights = c(0.1, 0.9), shareX = T)
+                    heights = c(0.1, 0.9), shareX = T, titleY = T)
       p3
       
       p3$width = 1200
@@ -1573,7 +1727,8 @@ server <- function(input, output, session) {
     filename = function() { paste("differential_features_anova", '.txt', sep='') },
     content = function(file) {
       stat_results <- da_feat_stat()
-      keepers <- subset(stat_results, p_adj < input$feat_pval_up)
+      keepers <- subset(stat_results, we.eBH < input$feat_pval_up &
+                          wi.eBH < input$feat_pval_up)
       write.table(keepers, file, row.names = FALSE, sep = '\t', quote = FALSE)
     }
   )
@@ -1643,11 +1798,11 @@ server <- function(input, output, session) {
                  text = plotter$groups,
                  z = plotter$Z_scored_CPM, type = "heatmap",
                  hoverinfo = 'y+text',
-                 colorbar = list(x = -0.2, 
+                 colorbar = list(x = -0.3, 
                                  xanchor = 'left',
                                  tickmode='array',
                                  tickvals = c(min(plotter$Z_scored_CPM),max(plotter$Z_scored_CPM)),
-                                 ticktext = c("low", "high"), tickfont = list(size=22))) %>%
+                                 ticktext = c("low", "high"), tickfont = list(size=18))) %>%
       layout(yaxis = ax, xaxis = ax)
     
     ####
@@ -1748,15 +1903,16 @@ server <- function(input, output, session) {
   
   output$spec_select <- renderPlotly({
     tax_sel <- spec_select_ggplot() + theme(legend.position='none',
-                                            axis.text.y = element_text(size = 18),
-                                            axis.title.x = element_text(size = 18))
+                                            axis.text.y = element_text(size = 15),
+                                            axis.title = element_text(size = 15))
     
     taxly <- ggplotly(tax_sel, tooltip = c('fill', 'text'))
+    taxly <- taxly %>% layout(margin=list(l = 100), yaxis=list(tickprefix=" "))
     
     
     p3 <- subplot(colorer(), taxly,
                   nrows = 2, margin = c(0,0,-0.01,0),
-                  heights = c(0.1, 0.9), shareX = T)
+                  heights = c(0.1, 0.9), shareX = T, titleY = T)
     p3
   })
   
@@ -1797,16 +1953,16 @@ server <- function(input, output, session) {
     select_gfam <- event.data$y
     
     feat_order <- reorder_mat()
+    
     feat_order2 <- subset(feat_order, rownames(feat_order) %in% select_gfam)
+    feat_order2 <- rbind(feat_order2, feat_order2)
+
+    print(feat_order2)
     
     groupings = new_group_names()
     grouping_nums = group_dims()
     
-    
-    
-    RA <- unlist(feat_order2)
-    sample_id <- rep(colnames(feat_order2), each = nrow(feat_order2))
-    
+
     group_titles = c()
     for (i in 1:length(groupings)) {
       title = groupings[i]
@@ -1815,52 +1971,90 @@ server <- function(input, output, session) {
       group_titles = c(group_titles, title_rep)
     }
     
-    group_titles2 = rep(group_titles, each = nrow(feat_order2))
+    conds <- group_titles
     
-    Feature <- rep(rownames(feat_order2), ncol(feat_order2))
-    
-    stat_df <- data.frame(Sample = sample_id, Group = group_titles2, 
-                          RA = RA, Feature = Feature)
-    
-    #a_test <- anova(lm(RA_clr ~ Group + Taxa, stat_df))
-    hoc_results <- data.frame(Feat = NA, Int = NA, p_adj = NA)
-    a_test <- anova(lm(RA ~ Group, stat_df))
-    result <- data.frame(Feature = select_gfam,
-                         F_val = a_test$`F value`[1],
-                         P_val = a_test$`Pr(>F)`[1])
-    validate(
-      need(result$P_val < 0.05, "This feature was not significant at the set threshold")
-    )
-    
-    h_test <- aov(RA ~ Group, stat_df)
-    tk <- TukeyHSD(h_test, "Group")
-    hresult <- data.frame(Feat = rep(select_gfam, ncol(combn(length(unique(stat_df$Group)), 2))),
-                          Int = rownames(tk$Group),
-                          p_adj = tk$Group[,4])
-    hoc_results <- hresult
-    
-    hoc_results
+    combos <- combn(unique(conds), 2)
+    stat_results = data.frame(we.ep = NA, we.eBH = NA, wi.ep = NA, wi.eBH = NA,
+                              rab.all = NA, rab.win.a = NA, rab.win.b = NA,
+                              diff.btw = NA, diff.win = NA, effect = NA, overlap = NA,
+                              Int = NA, Feature = NA)
+    for (i in 1:ncol(combos)){
+      withProgress({
+        ab <- combos[,i]
+        a <- ab[1]
+        b <- ab[2]
+        a_sel = which(conds == a)
+        b_sel = which(conds == b)
+        
+        feat_subset <- cbind(feat_order2[,a_sel], feat_order2[,b_sel])
+        cond_subset <- c(conds[a_sel], conds[b_sel])
+        x <- aldex.clr(feat_subset, cond_subset, mc.samples=16, verbose=TRUE)
+        x.tt <- aldex.ttest(x, cond_subset, paired.test = F)
+        x.effect <- aldex.effect(x, cond_subset, include.sample.summary=FALSE, verbose=TRUE)
+        x.all <- data.frame(x.tt, x.effect, stringsAsFactors=FALSE)
+        x.all$Int <- rep(paste0(a,"-", b), nrow(x.all))
+        x.all$Feature <- rownames(x.all)
+        names(x.all) = names(stat_results)
+        stat_results <- rbind(stat_results, x.all)
+      }, message = paste0("Calculating Differential Abundance ", i, " of ", ncol(combos))) 
+    }
+    stat_results
     
   })
   
   select_stat_plot <- reactive({
-    hoc_results <- select_stat_results()
-    
     event.data <- event_data("plotly_click", source = "g_select")
-    select_gfam <- event.data$y
+    validate(
+      need(!is.null(event.data), "Click Plot") #%then%
+        #need(##calc diff exp??)##
+    )
+
+    statter2 <- da_feat_stat()
+    statter2 <- statter2[-1,]
     
     groupings = new_group_names()
     grouping_nums = group_dims()
     
+    #### now select feat
+    
+    select_gfam <- event.data$y
+    
+    statter2 <- subset(statter2, Feature %in% select_gfam)
+    
+    total_ints <- c()
+    total_int <- combn(groupings, 2)
+    for (i in 1:ncol(total_int)){
+      int <- total_int[,i]
+      ints <- paste0(int[1], "-", int[2])
+      total_ints <- c(total_ints, ints)
+    }
+    
+    have <- statter2$Int
+    add <- setdiff(total_ints, have)
+    have_ints <- c(have, add)
+    
+    num_fill <- round(statter2$we.eBH, 4)
+    if (nrow(statter2) != ncol(combn(groupings, 2))){
+      how_short <- ncol(combn(groupings, 2)) - nrow(statter2)
+      add <- rep(NA, how_short)
+      num_fill <- c(num_fill, add)
+    }
+    
+    name_df <- data.frame(name=have_ints, num = num_fill)
+    rownames(name_df) <- name_df$name
+    name_df = name_df[total_ints,]
+    
     group_num <- length(groupings)
-    group1 <- gsub('.*-', "", hoc_results$Int[1])
-    group_rest <- gsub("-.*", "", hoc_results$Int[1:(group_num-1)])
+    group1 <- gsub('-.*', "", name_df$name[1])
+    group_rest <- gsub(".*-", "", name_df$name[1:(group_num-1)])
     group_names <- c(group1, group_rest)
     
+    num_fill2 <- name_df$num
+    
     resm <- matrix(NA, group_num, group_num)
-    resm[lower.tri(resm) ] <-round(hoc_results$p_adj, 4)
+    resm[lower.tri(resm) ] <- num_fill2
     resm <- t(resm)
-    resm[lower.tri(resm) ] <-round(hoc_results$p_adj, 4)
+    resm[lower.tri(resm) ] <- num_fill2
     rownames(resm) <- group_names
     colnames(resm) <- group_names
     print(resm)
@@ -1947,14 +2141,15 @@ server <- function(input, output, session) {
       
       tax_sel <- spec_select_ggplot()+theme(legend.position='none',
                                             axis.text.y = element_text(size = 18),
-                                            axis.title.x = element_text(size = 18))
+                                            axis.title = element_text(size = 18))
       
       taxly <- ggplotly(tax_sel, tooltip = c('fill', 'text'))
+      taxly <- taxly %>% layout(margin=list(l = 100), yaxis=list(tickprefix=" "))
       
       
       p3 <- subplot(colorer(), taxly,
                     nrows = 2, margin = c(0,0,-0.01,0),
-                    heights = c(0.1, 0.9), shareX = T)
+                    heights = c(0.1, 0.9), shareX = T, titleY = T)
       p3
       
       p3$width = 1200
@@ -2071,6 +2266,13 @@ server <- function(input, output, session) {
     str1 = c("Select Taxa Level of Interest")
     str3 = c("1=Kingdom, 2=Phylum, 3=Class...7=Species")
     HTML(paste(str1, str3, '<br/>', sep = '<br/>'))
+  })
+  
+  output$prop_exp <- renderUI({
+    str1 = c("Select the taxa contribution cutoff")
+    str2 = c("For abundant taxa select a higher proportion cutoff")
+    str3 = c("For rare taxa select a lower proportion cutoff")
+    HTML(paste(str1, str2, str3, '<br/>', sep = '<br/>'))
   })
   
   
@@ -2239,14 +2441,16 @@ server <- function(input, output, session) {
         theme(legend.position = 'none',
               panel.background = element_blank(),
               axis.text.x = element_blank(),
-              axis.text.y = element_text(size = 18),
-              axis.title.x = element_text(size = 18))#legend.text = element_text(size = 8))
+              axis.text.y = element_text(size = 15),
+              axis.title = element_text(size = 15))#legend.text = element_text(size = 8))
       
       taxly <- ggplotly(taxa_all, tooltip = c("fill", "text"))
       
+      taxly <- taxly %>% layout(margin=list(l = 100), yaxis=list(tickprefix=" "))
+      
       p3 <- subplot(colorer(), taxly,
                     nrows = 2, margin = c(0,0,-0.01,0),
-                    heights = c(0.1, 0.9), shareX = T)
+                    heights = c(0.1, 0.9), shareX = T, titleY = T)
       p3
     }, message = "Rendering")
   })
@@ -2265,13 +2469,14 @@ server <- function(input, output, session) {
               panel.background = element_blank(),
               axis.text.x = element_blank(),
               axis.text.y = element_text(size = 18),
-              axis.title.x = element_text(size = 18))#legend.text = element_text(size = 8))
+              axis.title = element_text(size = 18))#legend.text = element_text(size = 8))
       
       taxly <- ggplotly(taxa_all, tooltip = c("fill", "text"))
+      taxly <- taxly %>% layout(margin=list(l = 100), yaxis=list(tickprefix=" "))
       
       p3 <- subplot(colorer(), taxly,
                     nrows = 2, margin = c(0,0,-0.01,0),
-                    heights = c(0.1, 0.9), shareX = T)
+                    heights = c(0.1, 0.9), shareX = T, titleY = T)
       
       p3$width = 1200
       p3$height = 800
@@ -2304,17 +2509,28 @@ server <- function(input, output, session) {
 
   observe({
     output$taxa_selectors <- renderUI({
-      sliderInput("taxa_pval_up", "Adjusted P Value", min = 0, max = 0.1,
-                  step = 0.01, value = 0.05, width = '35%')
-    })
-    output$feat_selectors <- renderUI({
       fluidRow(
+        column(4, sliderInput("taxa_pval_up", "Adjusted P Value", min = 0, max = 0.1,
+                  step = 0.01, value = 0.05)),
+        column(4, sliderInput("taxa_effect", "Effect Size", min = 0, max = 10,
+                              step = 1, value = 5))
+      )
+    })
+    
+    output$feat_selectors <- renderUI({
+      stat_results <- da_feat_stat()
+      up_effect <- max(abs(stat_results$effect), na.rm=T)
+      up_pval <- max(abs(stat_results$we.eBH), na.rm=T)
+
+      fluidPage(
+        fluidRow(
         column(4, sliderInput("feat_pval_up", "Adjusted P Value", 
-                              min = 0, max = 0.1,
-                              step = 0.01, value = 0.05)),
-        column(4, sliderInput("var_select", "Variance Filter",
-                              min = 0, max = 1,
-                              value = 0.75))
+                              min = 0, max = round(up_pval, 0),
+                              step = 0.01, value = 0.05))),
+      fluidRow(
+        column(4, sliderInput("feat_effect", "Effect Size",
+                              min = 0, max = round(up_effect,0),
+                              value = 5)))
       )
     })
   })
@@ -2379,67 +2595,17 @@ server <- function(input, output, session) {
         stat_results <- rbind(stat_results, x.all)
       }, message = paste0("Calculating Differential Abundance ", i, " of ", ncol(combos))) 
     }
-    
-    
-    
-    # spec_trans <- spec_order
-    # cc <- data.frame(spec_trans)
-    # 
-    # x <- sweep(spec_order, 1L, rowMeans(spec_order, na.rm = T), check.margin = FALSE)
-    # sx <- apply(x, 1L, sd, na.rm = T)
-    # x <- sweep(x, 1L, sx, "/", check.margin = FALSE)
-    # 
-    # 
-    # RA <- unlist(x)
-    # RA_clr <- unlist(cc)
-    # sample_id <- rep(colnames(spec_order), each = nrow(spec_order))
-    # 
-    # group_titles = c()
-    # for (i in 1:length(groupings)) {
-    #   title = groupings[i]
-    #   reps = grouping_nums[i]
-    #   title_rep = rep(title, reps)
-    #   group_titles = c(group_titles, title_rep)
-    # }
-    # 
-    # group_titles2 = rep(group_titles, each = nrow(spec_order))
-    # 
-    # Taxa <- rep(rownames(spec_order), ncol(spec_order))
-    # 
-    # stat_df <- data.frame(Sample = sample_id, Group = group_titles2, RA = RA,
-    #                       RA_clr = RA_clr, Taxa = Taxa)
-    # 
-    # 
-    # uniq_bugs <- as.character(unlist(unique(stat_df$Taxa)))
-    # stat_results <- data.frame(Taxa = NA, F_val = NA, P_val = NA)
-    # hoc_results <- data.frame(Taxa = NA, Int = NA, p_adj = NA)
-    # for (i in 1:length(uniq_bugs)){
-    #   taxa <- uniq_bugs[i]
-    #   test <- subset(stat_df, Taxa == taxa)
-    #   a_test <- try(anova(lm(RA ~ Group, test)))
-    #   if (class(a_test)[1] != "try-error"){
-    #     result <- data.frame(Taxa = uniq_bugs[i],
-    #                          F_val = a_test$`F value`[1],
-    #                          P_val = a_test$`Pr(>F)`[1])
-    #     stat_results <- rbind(stat_results, result)
-    #     if (result$P_val < 0.05){
-    #       h_test <- aov(RA ~ Group, test)
-    #       tk <- TukeyHSD(h_test, "Group")
-    #       hresult <- data.frame(Taxa = rep(uniq_bugs[i], ncol(combn(length(unique(test$Group)), 2))),
-    #                             Int = rownames(tk$Group),
-    #                             p_adj = tk$Group[,4])
-    #       hoc_results <- rbind(hoc_results, hresult)
-    #     }
-    #   }
-    # }
-    #stat_results <- hoc_results
     stat_results
   })
   
   da_taxa <- reactive({
     stat_results <- da_taxa_stat()
-    keepers <- unique(subset(stat_results, wi.eBH < input$taxa_pval_up &
-                               we.eBH < input$taxa_pval_up)$Feature)
+    keepers_df <- subset(stat_results, wi.eBH < input$taxa_pval_up &
+                               we.eBH < input$taxa_pval_up)
+    
+    keepers <- unique(subset(keepers_df, effect > input$taxa_effect |
+                               effect < -input$taxa_effect)$Feature)
+    
     print(length(keepers))
     validate(
       need(length(keepers) > 0, "No signficant features were detected!")
@@ -2506,12 +2672,12 @@ server <- function(input, output, session) {
                  text = plotter$groups,
                  z = plotter$Z_scored_CPM, type = "heatmap",
                  hoverinfo = 'y+text',
-                 colorbar = list(x = -0.2, 
+                 colorbar = list(x = -0.3, 
                                  xanchor = 'left',
                                  tickmode='array',
                                  tickvals = c(min(plotter$Z_scored_CPM),max(plotter$Z_scored_CPM)),
-                                 ticktext = c("low", "high"), tickfont = list(size=22))) %>%
-      layout(yaxis = ax, xaxis = ax)
+                                 ticktext = c("low", "high"), tickfont = list(size=18))) %>%
+      layout(yaxis = ax, xaxis = ax, margin=list(l = 100))
     
     
     ####
@@ -2725,7 +2891,8 @@ server <- function(input, output, session) {
     filename = function() { paste("differential_taxa_anova", '.txt', sep='') },
     content = function(file) {
       stat_results <- da_taxa_stat()
-      keepers <- subset(stat_results, p_adj < input$taxa_pval_up)
+      keepers <- subset(stat_results, we.eBH < input$taxa_pval_up &
+                          wi.eBH < input$taxa_pval_up)
       write.table(keepers, file, row.names = FALSE, sep = '\t', quote = FALSE)
     }
   )

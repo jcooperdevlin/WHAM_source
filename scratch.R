@@ -73,9 +73,9 @@ exp_plot = ggplot(spec_g_data_filt, aes(x = Group,
                                         fill = Taxa)) +
   stat_summary(fun.y = "mean", geom = "bar", position = "fill")+
   scale_fill_manual(values = randomColor(uniq_spec_num)) +
-  ylab("Relative Abundance")
+  ylab("Relative Abundance") + theme(legend.position = 'none')
 
-
+pp = ggplotly(exp_plot)
 
 
 ## biobakery
@@ -1677,3 +1677,122 @@ total <- c("arm-vag", "arm-sal", "arm-sto", "vag-sal", "vag-sto", "sal-sto")
 
 setdiff(total, haves)
 
+
+
+#
+#
+#
+#
+#### 1-D aldex?
+
+names <- paste0("g_", 1:50)
+nums <- sample(1000, 25)
+nums <- c(nums, rep(c(5,2,4,5,2),5))
+
+h <- data.frame(nums)
+h <- t(h)
+
+names(h) <- names
+conds <- c(rep('a', 25), rep('b', 25))
+
+hh <- data.frame(h)
+names(hh) <- names
+hh2 <- rbind(hh, hh)
+
+x <- aldex.clr(hh2, conds = conds, mc.samples = 16)
+x.tt <- aldex.ttest(x, conds, paired.test = T)
+aldex.glm(x, conds)
+x.effect = aldex.effect(x, conditions = conds)
+
+
+
+#
+
+#
+#
+#
+#
+#
+### samp dfs
+Acc <- paste0("0000", 1:5)
+Features <- paste0("Feature", 1:5)
+Taxa <- c(paste0("Bug", 1:3), paste0("Bug", 1:2))
+num_mat <- matrix(NA,5,5)
+for (i in 1:ncol(num_mat)){
+  num_mat[,i] <- sample(1000,5)
+}
+colnames(num_mat) = paste0("Sample", 1:5)
+sample_df <- cbind(Acc, Features, Taxa, num_mat)
+
+
+##ebi
+Acc <- paste0("0000", 1:5)
+Features <- paste0("Feature", 1:5)
+#Taxa <- c(paste0("Bug", 1:3), paste0("Bug", 1:2))
+num_mat <- matrix(NA,5,5)
+for (i in 1:ncol(num_mat)){
+  num_mat[,i] <- sample(1000,5)
+}
+colnames(num_mat) = paste0("Sample", 1:5)
+sample_df <- cbind(Acc, Features, num_mat)
+
+
+
+
+
+#
+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#### practice colorkey manips
+resm <- matrix(NA, 3,3)
+resm[2,1] = 0.3
+resm[1,3] = 0.1
+#resm[1,1] = 0
+#resm[3,3] = 1
+
+resm_lab <- resm
+resm_lab[resm_lab < 0.0001] <- "<0.0001"
+
+
+if (any(resm<0.05, na.rm = T)){
+  breaker = seq(0, 0.05, by = 0.0005)
+  coler = c(colorRampPalette(c("red", "white"))(n=100))
+} else {
+  breaker <- seq(0, 1, by = 0.01)
+  coler <- c(colorRampPalette(c("white"))(n=100))
+}
+
+breaker <- seq(0, 1, by = 0.01)
+coler <- c(c(colorRampPalette(c("red", "white"))(n=6)),
+           c(colorRampPalette(c("white"))(n=94)))
+
+select_feat <- "Stuff"
+
+
+par(cex.main=0.8)
+heatmap.3(data.matrix(resm),
+          cellnote = resm_lab,
+          notecol="black",
+          key.title = NULL,
+          sepcolor="black",
+          breaks = 101,
+          col = coler,
+          dendrogram = 'none',
+          Rowv=F,
+          Colv=F,
+          margins=c(5,5),
+          cexRow=1.2,
+          cexCol=1.2#,
+)
+title(select_feat, line= -2.5)

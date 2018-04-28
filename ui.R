@@ -31,15 +31,20 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                       radioButtons('input_type', "Input Source",
                                                    choiceNames = c("Biobakery", "EBI"),
                                                    choiceValues = c("Biobakery", "EBI")),
-                                      radioButtons('sep', 'Separator',
-                                                   c(Tab='\t'),
-                                                   '\t'),
                                       checkboxInput("testme", "Try a Sample Dataset!", 
                                                     value = FALSE)
                                     ),
                                     mainPanel(
-                                      numericInput("filter_level", "Enter Filter Level",
-                                                   min = 0, max = 1, value = 0.9),
+                                      fluidRow(
+                                        column(7, sliderInput("filter_level", "Variance Filter",
+                                                   min = 0, max = 1, value = 0.75))),
+                                      fluidRow(
+                                        column(7, uiOutput("filter_message1"))),
+                                      tags$head(tags$style(
+                                        "#filter_message1{font-size: 18px}")),
+                                      fluidRow(column(7, uiOutput("filter_message2"))),
+                                      tags$head(tags$style(
+                                        "#filter_message2{color: #df691a; font-size: 18px}")),
                                       uiOutput("preview_shower")
                                     )
                                   ))
@@ -73,17 +78,20 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                  tabsetPanel(
                                  tabPanel("Explore Taxa",
                                           mainPanel(
-                                               fluidRow(column(4, sliderInput("taxaDims", 
+                                               fluidRow(column(5, sliderInput("taxaDims", 
                                                                      "Taxa Level", value = 6, 
                                                                      min=6, max = 7, step = 1)),
-                                                        column(4, sliderInput("taxa_limit",
+                                                        column(5, sliderInput("taxa_limit",
                                                                               "Taxa Proportions",
                                                                               1, min = 0, max = 1, step = 0.05,
                                                                               value = c(0.75,1)))),
-                                               fluidRow(column(6, uiOutput("ex_delimiter"))),
+                                               fluidRow(column(5, uiOutput("ex_delimiter")),
+                                                        column(5, uiOutput("prop_exp"))),
                                                tags$head(tags$style(
-                                                 "#ex_delimiter {color:white; font-size:16px}")),
-                                               fluidRow(uiOutput("TaxaDimExp")),
+                                                 "#ex_delimiter {color:#df691a; font-size:18px}")),
+                                               tags$head(tags$style(
+                                                 "#prop_exp {color:#df691a; font-size:18px}")),
+                                               #fluidRow(uiOutput("TaxaDimExp")),
                                                fluidPage(
                                                  fluidRow(column(12, uiOutput("key1"))),
                                                  fluidRow(column(12, plotlyOutput("species_explore")))),
@@ -130,18 +138,18 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                      fluidPage(
                                        fluidRow(textOutput("curr_select_search"),
                                                 tags$head(tags$style("#curr_select_search{font-size: 20px}"))),
-                                       fluidRow(column(7, fluidPage(uiOutput("key7"),
+                                       fluidRow(column(6, fluidPage(uiOutput("key7"),
                                                                     plotlyOutput("plot1", height = '500px'))),
-                                                column(5, fluidPage(uiOutput("key6"),
+                                                column(6, fluidPage(uiOutput("key6"),
                                                                     plotlyOutput("spec_select", height = '500px')))
                                                 ),
-                                       fluidRow(column(7, fluidPage(downloadButton("sel_explore_download", 
+                                       fluidRow(column(6, fluidPage(downloadButton("sel_explore_download", 
                                                                                    "Download Heatmap"))),
-                                                column(5, fluidPage(downloadButton("sel_explore_taxa_download", 
+                                                column(6, fluidPage(downloadButton("sel_explore_taxa_download", 
                                                                                    "Download Plot"),
                                                                     downloadButton("sel_explore_taxa_legend_download", 
                                                                                    "Download Legend")))),
-                                       fluidRow(column(7, uiOutput("select_feat_stat_ui")))
+                                       fluidRow(column(6, uiOutput("select_feat_stat_ui")))
                                        )
                             ),
     
@@ -163,10 +171,11 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                    '.navbar { font-size: 18px}',
                    '.navbar-brand {font-size:32px}')),
                  tags$style(HTML(".control-label {font-size:20px; font-weight:normal}")),
-                 tags$style(HTML(".radio label {font-size:18px; font-weight:normal}")),
+                 tags$style(HTML(".radio label {font-size:20px; font-weight:normal}")),
                  tags$style(HTML(".checkbox label {font-size:20px; font-weight:normal}")),
                  tags$style(HTML("label {font-size:20px; font-weight:normal}")),
-                 tags$style(HTML(".btn {font-size:18px; font-weight:normal}")),
+                 tags$style(HTML(".btn {font-size:20px; font-weight:normal}")),
+                 tags$style(HTML(".shiny-output-error-validation {font-size:18px;color:red}")),
                  tags$head(tags$style("*{ font-family: Helvetica; }"))
                                                             
 )
