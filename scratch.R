@@ -1756,7 +1756,7 @@ sample_df <- cbind(Acc, Features, num_mat)
 #
 #### practice colorkey manips
 resm <- matrix(NA, 3,3)
-resm[2,1] = 0.3
+resm[2,1] = 0.03
 resm[1,3] = 0.1
 #resm[1,1] = 0
 #resm[3,3] = 1
@@ -1773,20 +1773,21 @@ if (any(resm<0.05, na.rm = T)){
   coler <- c(colorRampPalette(c("white"))(n=100))
 }
 
-breaker <- seq(0, 1, by = 0.01)
-coler <- c(c(colorRampPalette(c("red", "white"))(n=6)),
-           c(colorRampPalette(c("white"))(n=94)))
+breaker <- seq(0, 1, by = 0.005)
+coler <- c(c(colorRampPalette(c("red", "white"))(n=11)),
+           c(colorRampPalette(c("white"))(n=189)))
 
 select_feat <- "Stuff"
 
 
 par(cex.main=0.8)
-heatmap.3(data.matrix(resm),
+heatmap.2(data.matrix(resm),
           cellnote = resm_lab,
           notecol="black",
           key.title = NULL,
+          key = T,
           sepcolor="black",
-          breaks = 101,
+          breaks = breaker,
           col = coler,
           dendrogram = 'none',
           Rowv=F,

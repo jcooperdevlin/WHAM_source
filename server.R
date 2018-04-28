@@ -892,7 +892,8 @@ server <- function(input, output, session) {
   
   output$key1_plot <- renderPlot({
     validate(
-      need(!is.null(new_group_names()[[1]]), "")
+      need(!is.null(new_group_names()[[1]]), "") %then%
+        need(nrow(spec_taxa_data())> 0, "")
     )
     groupings = new_group_names()
     cols_cols <- color_select()
@@ -1012,7 +1013,8 @@ server <- function(input, output, session) {
   
   output$key4_plot <- renderPlot({
     validate(
-      need(!is.null(new_group_names()[[1]]), "")
+      need(!is.null(new_group_names()[[1]]), "") %then%
+        need(length(da_feat())> 0, "")
     )
     groupings = new_group_names()
     cols_cols <- color_select()
@@ -1052,7 +1054,10 @@ server <- function(input, output, session) {
   
   output$key5_plot <- renderPlot({
     validate(
-      need(!is.null(new_group_names()[[1]]), "")
+      need(!is.null(new_group_names()[[1]]), "") %then%
+        need({
+          event.data <- event_data("plotly_click", source = "g_exp")
+          !is.null(event.data)}, "")
     )
     groupings = new_group_names()
     cols_cols <- color_select()
@@ -1093,7 +1098,10 @@ server <- function(input, output, session) {
   
   output$key6_plot <- renderPlot({
     validate(
-      need(!is.null(new_group_names()[[1]]), "")
+      need(!is.null(new_group_names()[[1]]), "") %then%
+        need({
+          event.data <- event_data("plotly_click", source = "g_select")
+          !is.null(event.data)}, "")
     )
     groupings = new_group_names()
     cols_cols <- color_select()
@@ -1134,7 +1142,8 @@ server <- function(input, output, session) {
   
   output$key7_plot <- renderPlot({
     validate(
-      need(!is.null(new_group_names()[[1]]), "")
+      need(!is.null(new_group_names()[[1]]), "") %then%
+        need(length(input$acc_list) > 0, "")
     )
     groupings = new_group_names()
     cols_cols <- color_select()
@@ -1255,6 +1264,14 @@ server <- function(input, output, session) {
       }, message = paste0("Calculating Differential Abundance ", i, " of ", ncol(combos))) 
     }
     print(dim(stat_results))
+    
+    #stat_results <- da_feat_stat()
+    up_effect <- max(abs(stat_results$effect), na.rm=T)
+    up_pval <- max(abs(stat_results$we.eBH), na.rm=T)
+    
+    updateSliderInput(session, "feat_pval_up", max = round(up_pval, 0))
+    updateSliderInput(session, "feat_effect", max = round(up_effect,0))
+    
     stat_results
   })
   
@@ -1541,16 +1558,20 @@ server <- function(input, output, session) {
         resm <- da_feat_stat_mat()
         
         resm_lab <- resm
-        resm_lab[resm_lab < 0.0001] <- "<0.0001"
+        resm_lab[resm_lab < 0.00001] <- "<0.00001"
         
         
-        if (any(resm<0.05, na.rm = T)){
-          breaker = seq(0, 0.05, by = 0.0005)
-          coler = c(colorRampPalette(c("red", "white"))(n=100))
-        } else {
-          breaker <- seq(0, 1, by = 0.01)
-          coler <- c(colorRampPalette(c("white"))(n=100))
-        }
+        # if (any(resm<0.05, na.rm = T)){
+        #   breaker = seq(0, 0.05, by = 0.0005)
+        #   coler = c(colorRampPalette(c("red", "white"))(n=100))
+        # } else {
+        #   breaker <- seq(0, 1, by = 0.01)
+        #   coler <- c(colorRampPalette(c("white"))(n=100))
+        # }
+        
+        breaker <- seq(0, 1, by = 0.005)
+        coler <- c(c(colorRampPalette(c("red", "white"))(n=11)),
+                   c(colorRampPalette(c("white"))(n=189)))
         
         select_feat <- event.data$y
         
@@ -1562,8 +1583,10 @@ server <- function(input, output, session) {
         }
         
         par(cex.main=0.8)
-        heatmap.3(data.matrix(resm),
+        heatmap.2(data.matrix(resm),
                   cellnote = resm_lab,
+                  density.info="none",
+                  trace=c("none"),
                   notecol="black",
                   key.title = NULL,
                   sepcolor="black",
@@ -1591,7 +1614,7 @@ server <- function(input, output, session) {
       output$da_feat_stat_tab <- renderTable({
         resm <- da_feat_stat_mat()
         resm_lab <- resm
-        resm_lab[resm_lab < 0.0001] <- "<0.0001"
+        resm_lab[resm_lab < 0.00001] <- "<0.00001"
         resm_lab <- cbind(Names = rownames(resm_lab), resm_lab)
         resm_lab
       }, caption = {
@@ -1682,16 +1705,20 @@ server <- function(input, output, session) {
       resm <- da_feat_stat_mat()
       
       resm_lab <- resm
-      resm_lab[resm_lab < 0.0001] <- "<0.0001"
+      resm_lab[resm_lab < 0.00001] <- "<0.00001"
       
       
-      if (any(resm<0.05, na.rm = T)){
-        breaker = seq(0, 0.05, by = 0.0005)
-        coler = c(colorRampPalette(c("red", "white"))(n=100))
-      } else {
-        breaker <- seq(0, 1, by = 0.01)
-        coler <- c(colorRampPalette(c("white"))(n=100))
-      }
+      # if (any(resm<0.05, na.rm = T)){
+      #   breaker = seq(0, 0.05, by = 0.0005)
+      #   coler = c(colorRampPalette(c("red", "white"))(n=100))
+      # } else {
+      #   breaker <- seq(0, 1, by = 0.01)
+      #   coler <- c(colorRampPalette(c("white"))(n=100))
+      # }
+      
+      breaker <- seq(0, 1, by = 0.005)
+      coler <- c(c(colorRampPalette(c("red", "white"))(n=11)),
+                 c(colorRampPalette(c("white"))(n=189)))
       
       select_gfam <- event.data$y
 
@@ -1704,8 +1731,10 @@ server <- function(input, output, session) {
       
       png(file, width = 25, height = 20, units = 'cm', res = 300)
       par(cex.main=0.8)
-      v = heatmap.3(data.matrix(resm),
+      v = heatmap.2(data.matrix(resm),
                     cellnote = resm_lab,
+                    density.info="none",
+                    trace=c("none"),
                     notecol="black",
                     key.title = NULL,
                     breaks = breaker,
@@ -2061,16 +2090,20 @@ server <- function(input, output, session) {
     resm
     
     resm_lab <- resm
-    resm_lab[resm_lab < 0.0001] <- "<0.0001"
+    resm_lab[resm_lab < 0.00001] <- "<0.00001"
     
     
-    if (any(resm<0.05, na.rm = T)){
-      breaker = seq(0, 0.05, by = 0.0005)
-      coler = c(colorRampPalette(c("red", "white"))(n=100))
-    } else {
-      breaker <- seq(0, 1, by = 0.01)
-      coler <- c(colorRampPalette(c("white"))(n=100))
-    }
+    # if (any(resm<0.05, na.rm = T)){
+    #   breaker = seq(0, 0.05, by = 0.0005)
+    #   coler = c(colorRampPalette(c("red", "white"))(n=100))
+    # } else {
+    #   breaker <- seq(0, 1, by = 0.01)
+    #   coler <- c(colorRampPalette(c("white"))(n=100))
+    # }
+    
+    breaker <- seq(0, 1, by = 0.005)
+    coler <- c(c(colorRampPalette(c("red", "white"))(n=11)),
+               c(colorRampPalette(c("white"))(n=189)))
     
     if (input$numInputs == 2){
       resm[1,2] = resm[1,2] + 0.0000001
@@ -2081,8 +2114,10 @@ server <- function(input, output, session) {
     
     par(cex.main=0.8)
     
-    v = heatmap.3(data.matrix(resm),
+    v = heatmap.2(data.matrix(resm),
               cellnote = resm_lab,
+              density.info="none",
+              trace=c("none"),
               notecol="black",
               key.title = NULL,
               breaks = breaker,
@@ -2202,16 +2237,20 @@ server <- function(input, output, session) {
       resm
       
       resm_lab <- resm
-      resm_lab[resm_lab < 0.0001] <- "<0.0001"
+      resm_lab[resm_lab < 0.00001] <- "<0.00001"
       
       
-      if (any(resm<0.05, na.rm = T)){
-        breaker = seq(0, 0.05, by = 0.0005)
-        coler = c(colorRampPalette(c("red", "white"))(n=100))
-      } else {
-        breaker <- seq(0, 1, by = 0.01)
-        coler <- c(colorRampPalette(c("white"))(n=100))
-      }
+      # if (any(resm<0.05, na.rm = T)){
+      #   breaker = seq(0, 0.05, by = 0.0005)
+      #   coler = c(colorRampPalette(c("red", "white"))(n=100))
+      # } else {
+      #   breaker <- seq(0, 1, by = 0.01)
+      #   coler <- c(colorRampPalette(c("white"))(n=100))
+      # }
+      
+      breaker <- seq(0, 1, by = 0.005)
+      coler <- c(c(colorRampPalette(c("red", "white"))(n=11)),
+                 c(colorRampPalette(c("white"))(n=189)))
       
       if (input$numInputs == 2){
         resm[1,2] = resm[1,2] + 0.0000001
@@ -2222,8 +2261,10 @@ server <- function(input, output, session) {
       
       png(file, height = 20, width = 25, units = 'cm', res = 300)
       par(cex.main=0.8)
-      v = heatmap.3(data.matrix(resm),
+      v = heatmap.2(data.matrix(resm),
                     cellnote = resm_lab,
+                    density.info="none",
+                    trace=c("none"),
                     notecol="black",
                     key.title = NULL,
                     breaks = breaker,
@@ -2516,24 +2557,21 @@ server <- function(input, output, session) {
                               step = 1, value = 5))
       )
     })
+  })
     
     output$feat_selectors <- renderUI({
-      stat_results <- da_feat_stat()
-      up_effect <- max(abs(stat_results$effect), na.rm=T)
-      up_pval <- max(abs(stat_results$we.eBH), na.rm=T)
-
       fluidPage(
         fluidRow(
-        column(4, sliderInput("feat_pval_up", "Adjusted P Value", 
-                              min = 0, max = round(up_pval, 0),
-                              step = 0.01, value = 0.05))),
-      fluidRow(
-        column(4, sliderInput("feat_effect", "Effect Size",
-                              min = 0, max = round(up_effect,0),
-                              value = 5)))
+          column(4, sliderInput("feat_pval_up", "Adjusted P Value", 
+                                min = 0, max = 0.1,
+                                step = 0.01, value = 0.05))),
+        fluidRow(
+          column(4, sliderInput("feat_effect", "Effect Size",
+                                min = 0, max = 10,
+                                value = 5)))
       )
     })
-  })
+    
   
  ##### Test Differential Abundance for Taxa
   
@@ -2595,6 +2633,12 @@ server <- function(input, output, session) {
         stat_results <- rbind(stat_results, x.all)
       }, message = paste0("Calculating Differential Abundance ", i, " of ", ncol(combos))) 
     }
+    up_effect <- max(abs(stat_results$effect), na.rm=T)
+    up_pval <- max(abs(stat_results$we.eBH), na.rm=T)
+
+    updateSliderInput(session, "taxa_pval_up", max = round(up_pval, 0))
+    updateSliderInput(session, "taxa_effect", max = round(up_effect,0))
+    
     stat_results
   })
   
@@ -2766,16 +2810,20 @@ server <- function(input, output, session) {
     resm <- da_taxa_stat_mat()
     
     resm_lab <- resm
-    resm_lab[resm_lab < 0.0001] <- "<0.0001"
+    resm_lab[resm_lab < 0.00001] <- "<0.00001"
     
     
-    if (any(resm<0.05, na.rm = T)){
-      breaker = seq(0, 0.05, by = 0.0005)
-      coler = c(colorRampPalette(c("red", "white"))(n=100))
-    } else {
-      breaker <- seq(0, 1, by = 0.01)
-      coler <- c(colorRampPalette(c("white"))(n=100))
-    }
+    # if (any(resm<0.05, na.rm = T)){
+    #   breaker = seq(0, 0.05, by = 0.0005)
+    #   coler = c(colorRampPalette(c("red", "white"))(n=100))
+    # } else {
+    #   breaker <- seq(0, 1, by = 0.01)
+    #   coler <- c(colorRampPalette(c("white"))(n=100))
+    # }
+    
+    breaker <- seq(0, 1, by = 0.005)
+    coler <- c(c(colorRampPalette(c("red", "white"))(n=11)),
+               c(colorRampPalette(c("white"))(n=189)))
     
     select_taxa <- event.data$y
     new_name <- unlist(strsplit(select_taxa, ";"))
@@ -2789,8 +2837,10 @@ server <- function(input, output, session) {
     }
     
     par(cex.main=0.8)
-    v = heatmap.3(data.matrix(resm),
+    v = heatmap.2(data.matrix(resm),
               cellnote = resm_lab,
+              density.info="none",
+              trace=c("none"),
               notecol="black",
               key.title = NULL,
               breaks = breaker,
@@ -2844,16 +2894,20 @@ server <- function(input, output, session) {
       resm <- da_taxa_stat_mat()
       
       resm_lab <- resm
-      resm_lab[resm_lab < 0.0001] <- "<0.0001"
+      resm_lab[resm_lab < 0.00001] <- "<0.00001"
       
       
-      if (any(resm<0.05, na.rm = T)){
-        breaker = seq(0, 0.05, by = 0.0005)
-        coler = c(colorRampPalette(c("red", "white"))(n=100))
-      } else {
-        breaker <- seq(0, 1, by = 0.01)
-        coler <- c(colorRampPalette(c("white"))(n=100))
-      }
+      # if (any(resm<0.05, na.rm = T)){
+      #   breaker = seq(0, 0.05, by = 0.0005)
+      #   coler = c(colorRampPalette(c("red", "white"))(n=100))
+      # } else {
+      #   breaker <- seq(0, 1, by = 0.01)
+      #   coler <- c(colorRampPalette(c("white"))(n=100))
+      # }
+      
+      breaker <- seq(0, 1, by = 0.005)
+      coler <- c(c(colorRampPalette(c("red", "white"))(n=11)),
+                 c(colorRampPalette(c("white"))(n=189)))
       
       select_taxa <- event.data$y
       new_name <- unlist(strsplit(select_taxa, ";"))
@@ -2868,8 +2922,10 @@ server <- function(input, output, session) {
       
       png(file, width = 25, height = 20, units = 'cm', res = 300)
       par(cex.main=0.8)
-      v = heatmap.3(data.matrix(resm),
+      v = heatmap.2(data.matrix(resm),
                     cellnote = resm_lab,
+                    density.info="none",
+                    trace=c("none"),
                     notecol="black",
                     key.title = NULL,
                     breaks = breaker,
@@ -3007,13 +3063,13 @@ server <- function(input, output, session) {
                    cellnote = sym_mat, notecol="black",
                    main="Correlation Values across \nAll Samples", #heatmap title
                    density.info="none",
+                   trace=c("none"),
                    breaks = seq(-1, 1, by = 0.02),
                    col=my_palette,
                    dendrogram="both",
                    margins=c(5,5),
                    cexRow=1,
                    cexCol=1.2,
-                   trace=c("none"),
                    na.color="gray60"
     )
     v

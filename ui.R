@@ -130,7 +130,7 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                             tabPanel("Feature Search",
                                      fluidRow(column(4,
                                                      selectizeInput('acc_list', choices=NULL,
-                                                                    label = h3("Select a Feature"),
+                                                                    label = h3("Select Feature(s)"),
                                                                     multiple = TRUE))#,
                                               #column(10, checkboxInput('xy_switch', label = 'group by Gene Family?')
                                               ),

@@ -756,10 +756,14 @@ heatmap.3 <-
       par(mar = c(5, 4, 2, 1), cex = 0.75)
       tmpbreaks <- breaks
       if (symkey) {
-        max.raw <- max(abs(c(x, breaks)), na.rm = TRUE)
-        min.raw <- -max.raw
-        tmpbreaks[1] <- -max(abs(x), na.rm = TRUE)
-        tmpbreaks[length(tmpbreaks)] <- max(abs(x), na.rm = TRUE)
+        #max.raw <- max(abs(c(x, breaks)), na.rm = TRUE)
+        max.raw = 1
+        min.raw = 0
+        #min.raw <- -max.raw
+        #tmpbreaks[1] <- -max(abs(x), na.rm = TRUE)
+        #tmpbreaks[length(tmpbreaks)] <- max(abs(x), na.rm = TRUE)
+        tmpbreaks[1] <- 0
+        tmpbreaks[length(tmpbreaks)] <- 1
       }
       else {
         min.raw <- min(x, na.rm = TRUE)
