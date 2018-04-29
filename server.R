@@ -1297,6 +1297,12 @@ server <- function(input, output, session) {
   #  updateSliderInput(session, "feat_effect", max = round(up,0))
   #})
   
+  output$gene_da_placehold <- renderUI({
+    m1 <- c("Differentially Abundant Features across all samples")
+    HTML(paste(m1, '<br/>', sep = '<br/>'))
+  })
+  
+  
   gene_da_plotly <- reactive({
     if(input$numInputs > 1){
       da_gene <- da_feat()
@@ -1389,8 +1395,8 @@ server <- function(input, output, session) {
     event.data <- event_data("plotly_click", source = "g_exp")
     
     validate(
-      need(is.null(event.data) == F, "Click on the Heatmap") %then%
-        need(event.data$y %in% full_file_feature()$Feature, "Click on the Heatmap") %then%
+      need(is.null(event.data) == F, "") %then%
+        need(event.data$y %in% full_file_feature()$Feature, "") %then%
         need(input$input_type == "Biobakery", "Specific Taxa Assignments not availble for EBI inputs")
     )
     
@@ -1430,18 +1436,31 @@ server <- function(input, output, session) {
   plot3_ggplot <- reactive({
     plotter <- plot3_df()
     
+    event.data <- event_data("plotly_click", source = "g_exp")
+    select_gfam <- event.data$y
+    
     #### filter to speed up plotting!
     plotter2 <- aggregate(plotter$RA, list(plotter$Taxa), sum)
     
     summer <- sum(plotter2[,2])
     plotter2$prop <- plotter2[,2]/summer
-    plotter3 <- subset(plotter2, 
-                           prop <= quantile(plotter2$prop, input$taxa_limit[2]))
-    plotter4 <- subset(plotter3, 
-                           prop > quantile(plotter3$prop, input$taxa_limit[1]))
+    #spec_g_data3 <- subset(spec_g_data2, 
+    #                       prop <= quantile(spec_g_data2$prop, input$taxa_limit[2]))
+    #spec_g_data4 <- subset(spec_g_data3, 
+    #                       prop > quantile(spec_g_data2$prop, input$taxa_limit[1]))
     
-    keep_taxa <- as.character(unlist(plotter4[,1]))
-    plotter2 <- subset(plotter, Taxa %in% keep_taxa)
+    spec_up <- subset(plotter2, prop > 0.01)
+    spec_down <- subset(plotter2, prop < 0.01)
+    
+    high_tax <- as.character(unlist(spec_up[,1]))
+    low_tax <- as.character(unlist(spec_down[,1]))
+    
+    spec_high <- subset(plotter, Taxa %in% high_tax)
+    spec_low <- subset(plotter, Taxa %in% low_tax)
+    
+    spec_low$Taxa <- factor(rep("Less than 1%", nrow(spec_low)))
+    
+    plotter2 <- rbind(spec_high, spec_low)
     
     ####
     plotter <- plotter2
@@ -1454,7 +1473,7 @@ server <- function(input, output, session) {
       stat_summary(fun.y = "mean", geom = "bar", position = "fill") +
       scale_fill_manual(values = randomColor(length(unique(plotter$Taxa))),
                         na.value = "grey") +
-      #ggtitle(select_gfam) + 
+      ggtitle(paste0("Taxa Contribution: ", select_gfam)) + 
       xlab("Sample") + ylab("Relative Abundance") +
       theme(panel.background = element_blank(),
             axis.text.x = element_blank(),
@@ -1467,8 +1486,8 @@ server <- function(input, output, session) {
     event.data <- event_data("plotly_click", source = "g_exp")
     
     validate(
-      need(is.null(event.data) == F, "Click on the Heatmap") %then%
-        need(event.data$y %in% full_file_feature()$Feature, "Click on the Heatmap")
+      need(is.null(event.data) == F, "") %then%
+        need(event.data$y %in% full_file_feature()$Feature, "")
     )
     tax_sel <- plot3_ggplot()+theme(legend.position='none')
     
@@ -1490,11 +1509,11 @@ server <- function(input, output, session) {
     event.data <- event_data("plotly_click", source = "g_exp")
     
     validate(
-      need(is.null(event.data) == F, "Click on the Heatmap")
+      need(is.null(event.data) == F, "")
     )
     
     validate(
-      need(event.data$y %in% da_feat_stat()$Feat, "Click on the Heatmap")
+      need(event.data$y %in% da_feat_stat()$Feat, "")
     )
     
     groupings = new_group_names()
@@ -1595,11 +1614,11 @@ server <- function(input, output, session) {
                   dendrogram = 'none',
                   Rowv=F,
                   Colv=F,
-                  margins=c(5,5),
+                  margins=c(10,10),
                   cexRow=1.2,
                   cexCol=1.2#,
         )
-        title(select_feat, line= -2.5)
+        title(paste0("Significance between groups for \n", select_feat), line= -2.5)
       })
     }
   })
@@ -1624,15 +1643,31 @@ server <- function(input, output, session) {
     }
   })
   
+  output$feat_map_description <- renderUI({
+    event.data <- event_data("plotly_click", source = "g_exp")
+    
+    # If NULL dont do anything
+    if (is.null(event.data) == T){
+      m1 <- c("Click the Heatmap for Differential Abundance Results")
+      m2 <- c("Additional feature specific Taxa Information will appear if available")
+      HTML(paste('<br/>', '<br/>', m1, m2, '<br/>', sep = '<br/>'))
+    } else {
+      return(NULL)
+    }
+  })
+  
   observe({
     validate(
       need(input$numInputs > 1, "Need at least 2 groups for ANOVA Test")
     )
       output$da_feat_stat_ui <- renderUI({
         fluidPage(
+          uiOutput("feat_map_description"),
+          tags$head(tags$style(
+            "#feat_map_description {color:#df691a; font-size:18px}")),
           plotOutput("da_feat_stat_heat"),
           fluidRow(fluidPage(downloadButton("feature_stat_download", "Download Heatmap"),
-                    downloadButton("feature_stat_results", "Download ANOVA Results")))
+                    downloadButton("feature_stat_results", "Download Stats")))
         )
       })
   })
@@ -1747,7 +1782,7 @@ server <- function(input, output, session) {
                     cexCol=1.2
       )
       v
-      title(select_gfam, line= -2.5)
+      title(paste0("Significance between groups for \n", select_gfam), line= -2.5)
       dev.off()
     }
   )
@@ -1771,6 +1806,23 @@ server <- function(input, output, session) {
   ####
   
   plot1_df <- reactive({
+    if (input$testme) {
+      validate(
+        need(length(group_dims())==4, "Please visit the group tab to verify group assignment")
+      )
+    } else {
+      if (input$input_type == "Biobakery"){
+        validate(
+          need(input$file1, "Please provide a file in the Upload Tab") %then%
+            need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
+      }
+      if (input$input_type == "EBI"){
+        validate(
+          need(input$features1, "Please provide a file in the Upload Tab") %then%
+            need(unlist(grouped_samps()), "Please select samples in the Group Tab"))
+      }
+    }
+    
     validate(
       need(length(input$acc_list) > 0, "")
     )
@@ -1848,6 +1900,15 @@ server <- function(input, output, session) {
     plot1_plotly
   })
   
+  output$plot1_placehold <- renderUI({
+    if (length(input$acc_list) < 1){
+      m1 <- c("Select Features to view relative abundance across samples")
+      HTML(paste(m1, '<br/>', sep = '<br/>'))
+    } else{
+      return(NULL)
+    }
+  })
+  
   
   ##### new spec select plot
   
@@ -1856,8 +1917,8 @@ server <- function(input, output, session) {
     
     # If NULL dont do anything
     validate(
-      need(is.null(event.data) == F, "Click on the Heatmap") %then%
-        need(event.data$y %in% input$acc_list, "Click on the Heatmap")
+      need(is.null(event.data) == F, "") %then%
+        need(event.data$y %in% input$acc_list, "")
     )
    
     select_gfam <- event.data$y
@@ -1899,18 +1960,31 @@ server <- function(input, output, session) {
     
     plotter <- spec_select_df()
     
+    event.data <- event_data("plotly_click", source = "g_select")
+    select_gfam <- event.data$y
+    
     #### filter to speed up plotting!!!!
     plotter2 <- aggregate(plotter$RA, list(plotter$Taxa), sum)
     
     summer <- sum(plotter2[,2])
     plotter2$prop <- plotter2[,2]/summer
-    plotter3 <- subset(plotter2, 
-                       prop <= quantile(plotter2$prop, input$taxa_limit[2]))
-    plotter4 <- subset(plotter3, 
-                       prop > quantile(plotter3$prop, input$taxa_limit[1]))
+    #spec_g_data3 <- subset(spec_g_data2, 
+    #                       prop <= quantile(spec_g_data2$prop, input$taxa_limit[2]))
+    #spec_g_data4 <- subset(spec_g_data3, 
+    #                       prop > quantile(spec_g_data2$prop, input$taxa_limit[1]))
     
-    keep_taxa <- as.character(unlist(plotter4[,1]))
-    plotter2 <- subset(plotter, Taxa %in% keep_taxa)
+    spec_up <- subset(plotter2, prop > 0.01)
+    spec_down <- subset(plotter2, prop < 0.01)
+    
+    high_tax <- as.character(unlist(spec_up[,1]))
+    low_tax <- as.character(unlist(spec_down[,1]))
+    
+    spec_high <- subset(plotter, Taxa %in% high_tax)
+    spec_low <- subset(plotter, Taxa %in% low_tax)
+    
+    spec_low$Taxa <- factor(rep("Less than 1%", nrow(spec_low)))
+    
+    plotter2 <- rbind(spec_high, spec_low)
     
     ####
     plotter <- plotter2
@@ -1923,6 +1997,7 @@ server <- function(input, output, session) {
       stat_summary(fun.y = "mean", geom = "bar", position = "fill") +
       scale_fill_manual(values = randomColor(length(unique(plotter$Taxa))),
                         na.value = "grey") +
+      ggtitle(paste0("Taxa Contribution: ", select_gfam)) +
       xlab("Sample") + ylab("Relative Abundance") +
       theme(panel.background = element_blank(),
             axis.text.x = element_blank())
@@ -1975,8 +2050,8 @@ server <- function(input, output, session) {
     
     # If NULL dont do anything
     validate(
-      need(is.null(event.data) == F, "Click on the Heatmap") %then%
-        need(event.data$y %in% input$acc_list, "Click on the Heatmap")
+      need(is.null(event.data) == F, "") %then%
+        need(event.data$y %in% input$acc_list, "")
     )
     
     select_gfam <- event.data$y
@@ -2034,7 +2109,7 @@ server <- function(input, output, session) {
   select_stat_plot <- reactive({
     event.data <- event_data("plotly_click", source = "g_select")
     validate(
-      need(!is.null(event.data), "Click Plot") #%then%
+      need(!is.null(event.data), "") #%then%
         #need(##calc diff exp??)##
     )
 
@@ -2130,12 +2205,29 @@ server <- function(input, output, session) {
               cexCol=1.2
     )
     v
-    title(select_gfam, line= -2.5)
+    title(paste0("Significance between groups for \n", select_gfam), line= -2.5)
   })
   
   output$select_stat_heat <- renderPlot({
     select_mat <- select_stat_plot()
     select_mat
+  })
+  
+  
+  output$sel_map_description <- renderUI({
+    validate(
+      need(length(input$acc_list)>0, "")
+    )
+    event.data <- event_data("plotly_click", source = "g_select")
+    
+    # If NULL dont do anything
+    if (is.null(event.data) == T){
+      m1 <- c("Click the Heatmap for Differential Abundance Results")
+      m2 <- c("Additional feature specific Taxa Information will appear if available")
+      HTML(paste('<br/>', '<br/>', m1, m2, '<br/>', sep = '<br/>'))
+    } else {
+      return(NULL)
+    }
   })
   
   
@@ -2145,9 +2237,12 @@ server <- function(input, output, session) {
     )
     output$select_feat_stat_ui <- renderUI({
       fluidPage(
+        uiOutput("sel_map_description"),
+        tags$head(tags$style(
+          "#sel_map_description {color:#df691a; font-size:18px}")),
         plotOutput("select_stat_heat"),
         fluidRow(fluidPage(downloadButton("sel_stat_download", "Download Plot"),
-                 downloadButton("sel_stat_results", "Download ANOVA Results")))
+                 downloadButton("sel_stat_results", "Download Stats")))
       )
     })
   })
@@ -2277,7 +2372,7 @@ server <- function(input, output, session) {
                     cexCol=1.2
       )
       v
-      title(select_gfam, line= -2.5)
+      title(paste0("Significance between groups for \n", select_gfam), line= -2.5)
       
       dev.off()
     }
@@ -2309,13 +2404,6 @@ server <- function(input, output, session) {
     HTML(paste(str1, str3, '<br/>', sep = '<br/>'))
   })
   
-  output$prop_exp <- renderUI({
-    str1 = c("Select the taxa contribution cutoff")
-    str2 = c("For abundant taxa select a higher proportion cutoff")
-    str3 = c("For rare taxa select a lower proportion cutoff")
-    HTML(paste(str1, str2, str3, '<br/>', sep = '<br/>'))
-  })
-  
   
   ## UI based on group nums
   
@@ -2324,12 +2412,13 @@ server <- function(input, output, session) {
       fluidPage(
         fluidRow(uiOutput("taxa_selectors")),
         fluidRow(textOutput("curr_taxa_exp")),
+        tags$head(tags$style("#curr_taxa_exp{font-size: 20px}")),
         fluidRow(column(12, uiOutput("key2"))),
         fluidRow(column(12, uiOutput("da_taxa_heat_UI"))),
         fluidRow(downloadButton("species_heat_download", "Download Heatmap")),
-        fluidRow(column(12, uiOutput("da_taxa_stat_ui"))),
+        fluidRow(column(8, uiOutput("da_taxa_stat_ui"))),
         fluidRow(downloadButton("species_stat_download", "Download Heatmap"),
-                 downloadButton("species_stat_results", "Download ANOVA Results"))
+                 downloadButton("species_stat_results", "Download Stats"))
       )
     }
   })
@@ -2457,25 +2546,44 @@ server <- function(input, output, session) {
       
       summer <- sum(spec_g_data2[,2])
       spec_g_data2$prop <- spec_g_data2[,2]/summer
-      spec_g_data3 <- subset(spec_g_data2, 
-                             prop <= quantile(spec_g_data2$prop, input$taxa_limit[2]))
-      spec_g_data4 <- subset(spec_g_data3, 
-                             prop > quantile(spec_g_data2$prop, input$taxa_limit[1]))
+      #spec_g_data3 <- subset(spec_g_data2, 
+      #                       prop <= quantile(spec_g_data2$prop, input$taxa_limit[2]))
+      #spec_g_data4 <- subset(spec_g_data3, 
+      #                       prop > quantile(spec_g_data2$prop, input$taxa_limit[1]))
       
-      keep_taxa <- as.character(unlist(spec_g_data4[,1]))
-      spec_g_data_filt <- subset(spec_g_data, Taxa %in% keep_taxa)
+      spec_up <- subset(spec_g_data2, prop > 0.01)
+      spec_down <- subset(spec_g_data2, prop < 0.01)
+      
+      high_tax <- as.character(unlist(spec_up[,1]))
+      low_tax <- as.character(unlist(spec_down[,1]))
+      
+      spec_high <- subset(spec_g_data, Taxa %in% high_tax)
+      spec_low <- subset(spec_g_data, Taxa %in% low_tax)
+      
+      spec_low$Taxa <- factor(rep("Less than 1%", nrow(spec_low)))
+      
+      spec_g_data_filt <- rbind(spec_high, spec_low)
+      
+      #keep_taxa <- as.character(unlist(spec_g_data4[,1]))
+      #spec_g_data_filt <- subset(spec_g_data, Taxa %in% keep_taxa)
       
       
       exp_plot = ggplot(spec_g_data_filt, aes(x = Sample_num,
                                               y = Relative_Abundance,
                                               fill = Taxa, text = Group)) +
         stat_summary(fun.y = "mean", geom = "bar", position = "fill")+
+        ggtitle("Total Taxonomic Contribution") +
         scale_fill_manual(values = randomColor(uniq_spec_num)) +
         ylab("Relative Abundance") + xlab("Sample")
     }, message = "Organizing Taxa")
     exp_plot
   })
 
+  output$species_explore_placehold <- renderUI({
+    m1 <- c("Taxonomic Distribution across all samples")
+    HTML(paste(m1, '<br/>', sep = '<br/>'))
+  })
+  
   output$species_explore <- renderPlotly({
     withProgress({
       taxa_all <- species_explore_plot() + 
@@ -2746,11 +2854,11 @@ server <- function(input, output, session) {
     event.data <- event_data("plotly_click", source = "t_exp")
     
     validate(
-      need(is.null(event.data) == F, "Click on the Heatmap")
+      need(is.null(event.data) == F, "")
     )
     
     validate(
-      need(event.data$y %in% da_taxa_stat()$Feature, "Click on the Heatmap")
+      need(event.data$y %in% da_taxa_stat()$Feature, "")
     )
     
     groupings = new_group_names()
@@ -2853,7 +2961,7 @@ server <- function(input, output, session) {
               cexCol=1.2
     )
     v
-    title(new_name, line= -2.5)
+    title(paste0("Significance between groups for \n", new_name), line= -2.5)
   })
 
   
@@ -2861,15 +2969,31 @@ server <- function(input, output, session) {
   output$da_taxa_stat_heat <- renderPlot({
     event.data <- event_data("plotly_click", source = "t_exp")
     validate(
-      need(is.null(event.data) == F, "Click on the Heatmap")
+      need(is.null(event.data) == F, "")
     )
     plott <- da_taxa_resm()
     plott
   })
 
+  output$taxa_map_description <- renderUI({
+    event.data <- event_data("plotly_click", source = "t_exp")
+    
+    # If NULL dont do anything
+    if (is.null(event.data) == T){
+      m1 <- c("Click the Heatmap for Differential Abundance Results")
+      HTML(paste('<br/>', m1, '<br/>', sep = '<br/>'))
+    } else {
+      return(NULL)
+    }
+  })
   
   output$da_taxa_stat_ui <- renderUI({
-    plotOutput("da_taxa_stat_heat")
+    fluidRow(fluidPage(
+      uiOutput("taxa_map_description"),
+      tags$head(tags$style(
+        "#taxa_map_description {color:#df691a; font-size:18px}")),
+      plotOutput("da_taxa_stat_heat")
+    ))
   })
   
   
@@ -2938,7 +3062,7 @@ server <- function(input, output, session) {
                     cexCol=1.2
       )
       v
-      title(new_name, line= -2.5)
+      title(paste0("Significance between groups for \n", new_name), line= -2.5)
       dev.off()
     }
   )
@@ -2967,6 +3091,7 @@ server <- function(input, output, session) {
   
   # All sample Correlation Plot #
 
+  
   actual_corr_plot <- reactive({
     if (input$testme) {
       validate(
@@ -2987,7 +3112,7 @@ server <- function(input, output, session) {
     }
 
     validate(
-      need(length(input$sig_select) > 1, 'Select at least two Features!')
+      need(length(input$sig_select) > 1, '')
     )
     corr_list = input$sig_select
 
@@ -3075,6 +3200,25 @@ server <- function(input, output, session) {
     v
   })
 
+  
+  output$corr_placehold <- renderUI({
+    if (length(input$sig_select) < 2){
+      m1 <- c("Select at least two Features for cross-correlation analysis")
+      HTML(paste(m1, '<br/>', sep = '<br/>'))
+    } else{
+      return(NULL)
+    }
+  })
+  
+  output$corr_info <- renderUI({
+    if (length(input$sig_select) > 1){
+      m1 <- c("Feature number key can be found below generated plots")
+      HTML(paste(m1, '<br/>', sep = '<br/>'))
+    } else{
+      return(NULL)
+    }
+  })
+  
   output$corr_plot <- renderPlot({
     actual_corr_plot()
   })
@@ -3099,7 +3243,7 @@ server <- function(input, output, session) {
     }
 
     validate(
-      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+      need(length(input$sig_select) > 1, '')
     )
     corr_list = input$sig_select
 
@@ -3138,7 +3282,7 @@ server <- function(input, output, session) {
     }
 
     validate(
-      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+      need(length(input$sig_select) > 1, '')
     )
     corr_list2 = input$sig_select
 
@@ -3214,7 +3358,7 @@ server <- function(input, output, session) {
     }
 
     validate(
-      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+      need(length(input$sig_select) > 1, '')
     )
     corr_list2 = input$sig_select
 
@@ -3330,7 +3474,7 @@ server <- function(input, output, session) {
     }
 
     validate(
-      need(length(input$sig_select) > 1, 'Select at least two Gene Families!')
+      need(length(input$sig_select) > 1, '')
     )
 
     Gene_Families = actual_corr_names()
@@ -3467,7 +3611,7 @@ server <- function(input, output, session) {
                      breaks = seq(-1, 1, by = 0.02),
                      col=my_palette,
                      dendrogram="both",
-                     margins=c(5,5),
+                     margins=c(10,10),
                      cexRow=1,
                      cexCol=1.2,
                      trace=c("none"),

@@ -78,51 +78,57 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                  tabsetPanel(
                                  tabPanel("Explore Taxa",
                                           mainPanel(
-                                               fluidRow(column(5, sliderInput("taxaDims", 
-                                                                     "Taxa Level", value = 6, 
-                                                                     min=6, max = 7, step = 1)),
-                                                        column(5, sliderInput("taxa_limit",
-                                                                              "Taxa Proportions",
-                                                                              1, min = 0, max = 1, step = 0.05,
-                                                                              value = c(0.75,1)))),
-                                               fluidRow(column(5, uiOutput("ex_delimiter")),
-                                                        column(5, uiOutput("prop_exp"))),
-                                               tags$head(tags$style(
-                                                 "#ex_delimiter {color:#df691a; font-size:18px}")),
-                                               tags$head(tags$style(
-                                                 "#prop_exp {color:#df691a; font-size:18px}")),
-                                               #fluidRow(uiOutput("TaxaDimExp")),
-                                               fluidPage(
-                                                 fluidRow(column(12, uiOutput("key1"))),
-                                                 fluidRow(column(12, plotlyOutput("species_explore")))),
-                                               fluidRow(downloadButton("species_download", "Download Plot"), 
-                                                        downloadButton("species_legend_download", "Download Legend"),
-                                                        downloadButton("species_raw_data", "Download Table")),
-                                               #fluidPage(
-                                               fluidRow(uiOutput("da_taxa_ui")),
-                                               width = 11)),
-                                               #fluidRow(tableOutput("da_taxa_labs")),
-                                               #width = 11)),
+                                            fluidRow(column(12, uiOutput("species_explore_placehold"))),
+                                            tags$head(tags$style(
+                                              "#species_explore_placehold {color:#df691a; font-size:18px}")),
+                                            fluidRow(column(5, sliderInput("taxaDims", 
+                                                                           "Taxa Level", value = 6, 
+                                                                           min=6, max = 7, step = 1))),
+                                            fluidRow(column(5, uiOutput("ex_delimiter")),
+                                                     column(5, uiOutput("prop_exp"))),
+                                            tags$head(tags$style(
+                                              "#ex_delimiter {color:#df691a; font-size:18px}")),
+                                            tags$head(tags$style(
+                                              "#prop_exp {color:#df691a; font-size:18px}")),
+                                            #fluidRow(uiOutput("TaxaDimExp")),
+                                            fluidPage(
+                                              fluidRow(column(12, uiOutput("key1"))),
+                                              fluidRow(column(12, plotlyOutput("species_explore")))),
+                                            fluidRow(downloadButton("species_download", "Download Plot"), 
+                                                     downloadButton("species_legend_download", "Download Legend"),
+                                                     downloadButton("species_raw_data", "Download Table")),
+                                            #fluidPage(
+                                            fluidRow(uiOutput("da_taxa_ui")),
+                                            width = 11)),
+                                 #fluidRow(tableOutput("da_taxa_labs")),
+                                 #width = 11)),
                                  tabPanel("Explore Features",
                                           mainPanel(
+                                            fluidRow(column(12, uiOutput("gene_da_placehold"))),
+                                            tags$head(tags$style(
+                                              "#gene_da_placehold {color:#df691a; font-size:18px}")),
                                             textOutput("instructions"),
                                             fluidRow(uiOutput("feat_selectors")),
                                             fluidRow(textOutput("curr_select_exp"),
                                                      tags$head(tags$style("#curr_select_exp{font-size: 20px}"))),
+                                            fluidRow(column(6, fluidPage(
+                                              uiOutput("key4")))),
                                             fluidRow(
                                               column(6, fluidPage(
-                                                uiOutput("key4"),
-                                                plotlyOutput("gene_da"))),
-                                              column(6, fluidPage(
-                                                uiOutput("key5"),
-                                                plotlyOutput("Plot3")))),
-                                            fluidRow(column(6, fluidPage(downloadButton("gene_explore_download", 
-                                                                              "Download Heatmap"))),
-                                                     column(6, fluidPage(downloadButton("gene_explore_taxa_download", 
-                                                                              "Download Plot"),
-                                                            downloadButton("gene_explore_taxa_legend_download", 
-                                                                           "Download Legend")))),
-                                            fluidRow(column(6, uiOutput("da_feat_stat_ui"))),
+                                                plotlyOutput("gene_da"),
+                                                downloadButton("gene_explore_download", 
+                                                               "Download Heatmap"))),
+                                              column(6,
+                                                uiOutput("da_feat_stat_ui"))
+                                            ),
+                                            fluidRow(column(12, fluidPage(
+                                              uiOutput("key5"),
+                                              plotlyOutput("Plot3")),
+                                              downloadButton("gene_explore_taxa_download", 
+                                                             "Download Plot"),
+                                              downloadButton("gene_explore_taxa_legend_download", 
+                                                             "Download Legend")
+                                              )),
                                             width = 12))
                         )),
                  tabPanel("Query Your Data",
@@ -136,34 +142,49 @@ ui <- navbarPage(title = "Workflow Hub for Automated Metagenomic Exploration",
                                               ),
                                      hr(),
                                      fluidPage(
+                                       fluidRow(uiOutput("plot1_placehold"),
+                                                tags$head(tags$style(
+                                                  "#plot1_placehold {color:#df691a; font-size:18px}"))),
                                        fluidRow(textOutput("curr_select_search"),
                                                 tags$head(tags$style("#curr_select_search{font-size: 20px}"))),
-                                       fluidRow(column(6, fluidPage(uiOutput("key7"),
-                                                                    plotlyOutput("plot1", height = '500px'))),
-                                                column(6, fluidPage(uiOutput("key6"),
-                                                                    plotlyOutput("spec_select", height = '500px')))
-                                                ),
-                                       fluidRow(column(6, fluidPage(downloadButton("sel_explore_download", 
+                                       fluidRow(column(6, fluidPage(uiOutput("key7")))),
+                                       fluidRow(column(6, fluidPage(
+                                                                    plotlyOutput("plot1"),
+                                                                    downloadButton("sel_explore_download", 
                                                                                    "Download Heatmap"))),
-                                                column(6, fluidPage(downloadButton("sel_explore_taxa_download", 
-                                                                                   "Download Plot"),
-                                                                    downloadButton("sel_explore_taxa_legend_download", 
-                                                                                   "Download Legend")))),
-                                       fluidRow(column(6, uiOutput("select_feat_stat_ui")))
-                                       )
+                                                column(6, fluidPage(uiOutput("select_feat_stat_ui")))),
+                                       fluidRow(column(12, fluidPage(uiOutput("key6"),
+                                                       plotlyOutput("spec_select"),
+                                                       downloadButton("sel_explore_taxa_download", 
+                                                                      "Download Plot"),
+                                                       downloadButton("sel_explore_taxa_legend_download", 
+                                                                      "Download Legend"))))
+                                     )
                             ),
     
-                            tabPanel("Correlation", selectizeInput('sig_select', choices=NULL,
-                                                                   label = h3("Begin by selecting two Features"),
-                                                                   multiple = TRUE),
-                                     fluidRow(column(4, verbatimTextOutput("sig_message"))),
-                                     fluidPage(column(10, plotOutput("corr_plot"))),
-                                     fluidRow(downloadButton("corr_download", "Download Plot")),
-                                     fluidPage(column(10, uiOutput("group_corrs"))),
-                                     fluidRow(uiOutput("group_download")),
-                                     fluidPage(column(10, tableOutput("corr_labels"))),
-                                     fluidRow(downloadButton("corr_table_download", "Download Labels")))
-                            )
+                            tabPanel("Correlation", 
+                                     fluidRow(column(4,
+                                       selectizeInput('sig_select', choices=NULL,
+                                                      label = h3("Select two Features"),
+                                                      multiple = TRUE))
+                                       ),
+                                     hr(),
+                                     fluidPage(
+                                       fluidRow(uiOutput("corr_placehold"),
+                                                tags$head(tags$style(
+                                                  "#corr_placehold {color:#df691a; font-size:18px}"))),
+                                       fluidRow(column(4, verbatimTextOutput("sig_message")),
+                                                column(4, uiOutput("corr_info"),
+                                                       tags$head(tags$style(
+                                                         "#corr_info {color:#df691a; font-size:18px}")))),
+                                       fluidRow(column(10, plotOutput("corr_plot"))),
+                                       fluidRow(downloadButton("corr_download", "Download Plot")),
+                                       fluidRow(column(10, uiOutput("group_corrs"))),
+                                       fluidRow(uiOutput("group_download")),
+                                       fluidRow(column(10, tableOutput("corr_labels"))),
+                                       fluidRow(downloadButton("corr_table_download", "Download Labels"))
+                                     )
+                            ))
                           ),
                         tabPanel(title = loadingLogo("https://www.youtube.com/watch?v=pIgZ7gMze7A", "wham_logo_trans.png",
                                                             'wham_grey_inf.gif', height = 135, width = 280)),
