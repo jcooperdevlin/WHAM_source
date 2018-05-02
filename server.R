@@ -1057,7 +1057,8 @@ server <- function(input, output, session) {
       need(!is.null(new_group_names()[[1]]), "") %then%
         need({
           event.data <- event_data("plotly_click", source = "g_exp")
-          !is.null(event.data)}, "")
+          !is.null(event.data)}, "") %then%
+        need(input$input_type == "Biobakery", "")
     )
     groupings = new_group_names()
     cols_cols <- color_select()
@@ -1101,7 +1102,8 @@ server <- function(input, output, session) {
       need(!is.null(new_group_names()[[1]]), "") %then%
         need({
           event.data <- event_data("plotly_click", source = "g_select")
-          !is.null(event.data)}, "")
+          !is.null(event.data)}, "") %then%
+        need(input$input_type == "Biobakery", "")
     )
     groupings = new_group_names()
     cols_cols <- color_select()
@@ -1243,8 +1245,10 @@ server <- function(input, output, session) {
                               rab.all = NA, rab.win.a = NA, rab.win.b = NA,
                               diff.btw = NA, diff.win = NA, effect = NA, overlap = NA,
                               Int = NA, Feature = NA)
+    time_ep = NULL
     for (i in 1:ncol(combos)){
       withProgress({
+        start = Sys.time()
         ab <- combos[,i]
         a <- ab[1]
         b <- ab[2]
@@ -1254,14 +1258,18 @@ server <- function(input, output, session) {
         feat_subset <- cbind(feat_order[,a_sel], feat_order[,b_sel])
         cond_subset <- c(conds[a_sel], conds[b_sel])
         x <- aldex.clr(feat_subset, cond_subset, mc.samples=16, verbose=TRUE)
-        x.tt <- aldex.ttest(x, cond_subset, paired.test = F)
+        x.tt <- aldex.ttest2(x, cond_subset, paired.test = F)
         x.effect <- aldex.effect(x, cond_subset, include.sample.summary=FALSE, verbose=TRUE)
         x.all <- data.frame(x.tt, x.effect, stringsAsFactors=FALSE)
         x.all$Int <- rep(paste0(a,"-", b), nrow(x.all))
         x.all$Feature <- rownames(x.all)
         names(x.all) = names(stat_results)
         stat_results <- rbind(stat_results, x.all)
-      }, message = paste0("Calculating Differential Abundance ", i, " of ", ncol(combos))) 
+        end <- Sys.time()
+        time_ep <- paste0(": ", round(end-start,1), "s per step")
+      }, message = paste0("Calculating Differential Abundance ", 
+                          i, " of ", ncol(combos),
+                          time_ep)) 
     }
     print(dim(stat_results))
     
@@ -1658,7 +1666,7 @@ server <- function(input, output, session) {
   
   observe({
     validate(
-      need(input$numInputs > 1, "Need at least 2 groups for ANOVA Test")
+      need(input$numInputs > 1, "Need at least 2 groups for ALDEX Test")
     )
       output$da_feat_stat_ui <- renderUI({
         fluidPage(
@@ -1725,7 +1733,7 @@ server <- function(input, output, session) {
     filename = function() { paste("gene_explore_taxa_legend", '.png', sep='') },
     content = function(file) {
       species = length(unique(plot3_df()$Taxa))
-      png(file, width = 35, height = 0.3*(species/3), units ='cm', res = 300)
+      png(file, width = 35, height = 0.3*(species/1), units ='cm', res = 300)
       grid.draw(gene_explore_taxa_legend())
       dev.off()
     }
@@ -1788,12 +1796,12 @@ server <- function(input, output, session) {
   )
   
   output$feature_stat_results <- downloadHandler(
-    filename = function() { paste("differential_features_anova", '.txt', sep='') },
+    filename = function() { paste("differential_features_aldex", '.txt', sep='') },
     content = function(file) {
       stat_results <- da_feat_stat()
-      keepers <- subset(stat_results, we.eBH < input$feat_pval_up &
-                          wi.eBH < input$feat_pval_up)
-      write.table(keepers, file, row.names = FALSE, sep = '\t', quote = FALSE)
+      #keepers <- subset(stat_results, we.eBH < input$feat_pval_up &
+      #                    wi.eBH < input$feat_pval_up)
+      write.table(stat_results, file, row.names = FALSE, sep = '\t', quote = FALSE)
     }
   )
   
@@ -2041,71 +2049,6 @@ server <- function(input, output, session) {
     message
   })
   
-  
-  
-  #### select anova and post hoc results
-  
-  select_stat_results <- reactive({
-    event.data <- event_data("plotly_click", source = "g_select")
-    
-    # If NULL dont do anything
-    validate(
-      need(is.null(event.data) == F, "") %then%
-        need(event.data$y %in% input$acc_list, "")
-    )
-    
-    select_gfam <- event.data$y
-    
-    feat_order <- reorder_mat()
-    
-    feat_order2 <- subset(feat_order, rownames(feat_order) %in% select_gfam)
-    feat_order2 <- rbind(feat_order2, feat_order2)
-
-    print(feat_order2)
-    
-    groupings = new_group_names()
-    grouping_nums = group_dims()
-    
-
-    group_titles = c()
-    for (i in 1:length(groupings)) {
-      title = groupings[i]
-      reps = grouping_nums[i]
-      title_rep = rep(title, reps)
-      group_titles = c(group_titles, title_rep)
-    }
-    
-    conds <- group_titles
-    
-    combos <- combn(unique(conds), 2)
-    stat_results = data.frame(we.ep = NA, we.eBH = NA, wi.ep = NA, wi.eBH = NA,
-                              rab.all = NA, rab.win.a = NA, rab.win.b = NA,
-                              diff.btw = NA, diff.win = NA, effect = NA, overlap = NA,
-                              Int = NA, Feature = NA)
-    for (i in 1:ncol(combos)){
-      withProgress({
-        ab <- combos[,i]
-        a <- ab[1]
-        b <- ab[2]
-        a_sel = which(conds == a)
-        b_sel = which(conds == b)
-        
-        feat_subset <- cbind(feat_order2[,a_sel], feat_order2[,b_sel])
-        cond_subset <- c(conds[a_sel], conds[b_sel])
-        x <- aldex.clr(feat_subset, cond_subset, mc.samples=16, verbose=TRUE)
-        x.tt <- aldex.ttest(x, cond_subset, paired.test = F)
-        x.effect <- aldex.effect(x, cond_subset, include.sample.summary=FALSE, verbose=TRUE)
-        x.all <- data.frame(x.tt, x.effect, stringsAsFactors=FALSE)
-        x.all$Int <- rep(paste0(a,"-", b), nrow(x.all))
-        x.all$Feature <- rownames(x.all)
-        names(x.all) = names(stat_results)
-        stat_results <- rbind(stat_results, x.all)
-      }, message = paste0("Calculating Differential Abundance ", i, " of ", ncol(combos))) 
-    }
-    stat_results
-    
-  })
-  
   select_stat_plot <- reactive({
     event.data <- event_data("plotly_click", source = "g_select")
     validate(
@@ -2233,7 +2176,7 @@ server <- function(input, output, session) {
   
   observe({
     validate(
-      need(input$numInputs > 1, "Need at least 2 groups for ANOVA Test")
+      need(input$numInputs > 1, "Need at least 2 groups for ALDEX Test")
     )
     output$select_feat_stat_ui <- renderUI({
       fluidPage(
@@ -2310,25 +2253,61 @@ server <- function(input, output, session) {
   output$sel_stat_download <- downloadHandler(
     filename = function() { paste("select_differential_features_heat", '.png', sep='') },
     content = function(file) {
-      hoc_results <- select_stat_results()
-      
       event.data <- event_data("plotly_click", source = "g_select")
-      select_gfam <- event.data$y
+      validate(
+        need(!is.null(event.data), "") #%then%
+        #need(##calc diff exp??)##
+      )
+      
+      statter2 <- da_feat_stat()
+      statter2 <- statter2[-1,]
       
       groupings = new_group_names()
       grouping_nums = group_dims()
       
+      #### now select feat
+      
+      select_gfam <- event.data$y
+      
+      statter2 <- subset(statter2, Feature %in% select_gfam)
+      
+      total_ints <- c()
+      total_int <- combn(groupings, 2)
+      for (i in 1:ncol(total_int)){
+        int <- total_int[,i]
+        ints <- paste0(int[1], "-", int[2])
+        total_ints <- c(total_ints, ints)
+      }
+      
+      have <- statter2$Int
+      add <- setdiff(total_ints, have)
+      have_ints <- c(have, add)
+      
+      num_fill <- round(statter2$we.eBH, 4)
+      if (nrow(statter2) != ncol(combn(groupings, 2))){
+        how_short <- ncol(combn(groupings, 2)) - nrow(statter2)
+        add <- rep(NA, how_short)
+        num_fill <- c(num_fill, add)
+      }
+      
+      name_df <- data.frame(name=have_ints, num = num_fill)
+      rownames(name_df) <- name_df$name
+      name_df = name_df[total_ints,]
+      
       group_num <- length(groupings)
-      group1 <- gsub('.*-', "", hoc_results$Int[1])
-      group_rest <- gsub("-.*", "", hoc_results$Int[1:(group_num-1)])
+      group1 <- gsub('-.*', "", name_df$name[1])
+      group_rest <- gsub(".*-", "", name_df$name[1:(group_num-1)])
       group_names <- c(group1, group_rest)
       
+      num_fill2 <- name_df$num
+      
       resm <- matrix(NA, group_num, group_num)
-      resm[lower.tri(resm) ] <-round(hoc_results$p_adj, 4)
+      resm[lower.tri(resm) ] <- num_fill2
       resm <- t(resm)
-      resm[lower.tri(resm) ] <-round(hoc_results$p_adj, 4)
+      resm[lower.tri(resm) ] <- num_fill2
       rownames(resm) <- group_names
       colnames(resm) <- group_names
+      print(resm)
       resm
       
       resm_lab <- resm
@@ -2354,7 +2333,7 @@ server <- function(input, output, session) {
         resm[1,2] = 1e-7
       }
       
-      png(file, height = 20, width = 25, units = 'cm', res = 300)
+      png(file, width = 25, height = 20, units = 'cm', res = 300)
       par(cex.main=0.8)
       v = heatmap.2(data.matrix(resm),
                     cellnote = resm_lab,
@@ -2379,10 +2358,51 @@ server <- function(input, output, session) {
   )
   
   output$sel_stat_results <- downloadHandler(
-    filename = function() { paste("select_differential_features_anova", '.txt', sep='') },
+    filename = function() { paste("select_differential_features_aldex", '.txt', sep='') },
     content = function(file) {
-      stat_results <- select_stat_results()
-      write.table(stat_results, file, row.names = FALSE, sep = '\t', quote = FALSE)
+      event.data <- event_data("plotly_click", source = "g_select")
+      validate(
+        need(!is.null(event.data), "") #%then%
+        #need(##calc diff exp??)##
+      )
+      
+      statter2 <- da_feat_stat()
+      statter2 <- statter2[-1,]
+      
+      groupings = new_group_names()
+      grouping_nums = group_dims()
+      
+      #### now select feat
+      
+      select_gfam <- event.data$y
+      
+      statter2 <- subset(statter2, Feature %in% select_gfam)
+      
+      total_ints <- c()
+      total_int <- combn(groupings, 2)
+      for (i in 1:ncol(total_int)){
+        int <- total_int[,i]
+        ints <- paste0(int[1], "-", int[2])
+        total_ints <- c(total_ints, ints)
+      }
+      
+      have <- statter2$Int
+      add <- setdiff(total_ints, have)
+      have_ints <- c(have, add)
+      
+      num_fill <- round(statter2$we.eBH, 4)
+      if (nrow(statter2) != ncol(combn(groupings, 2))){
+        how_short <- ncol(combn(groupings, 2)) - nrow(statter2)
+        add <- rep(NA, how_short)
+        num_fill <- c(num_fill, add)
+      }
+      
+      name_df <- data.frame(name=have_ints, num = num_fill)
+      rownames(name_df) <- name_df$name
+      name_df = name_df[total_ints,]
+      colnames(name_df) <- c("Interaction", "Adjusted_p_value")
+      
+      write.table(name_df, file, row.names = FALSE, sep = '\t', quote = FALSE)
     }
   )
   
@@ -2732,7 +2752,7 @@ server <- function(input, output, session) {
         feat_subset <- cbind(spec_order[,a_sel], spec_order[,b_sel])
         cond_subset <- c(conds[a_sel], conds[b_sel])
         x <- aldex.clr(feat_subset, cond_subset, mc.samples=16, verbose=TRUE)
-        x.tt <- aldex.ttest(x, cond_subset, paired.test = F)
+        x.tt <- aldex.ttest2(x, cond_subset, paired.test = F)
         x.effect <- aldex.effect(x, cond_subset, include.sample.summary=FALSE, verbose=TRUE)
         x.all <- data.frame(x.tt, x.effect, stringsAsFactors=FALSE)
         x.all$Int <- rep(paste0(a,"-", b), nrow(x.all))
@@ -3068,7 +3088,7 @@ server <- function(input, output, session) {
   )
   
   output$species_stat_results <- downloadHandler(
-    filename = function() { paste("differential_taxa_anova", '.txt', sep='') },
+    filename = function() { paste("differential_taxa_aldex", '.txt', sep='') },
     content = function(file) {
       stat_results <- da_taxa_stat()
       keepers <- subset(stat_results, we.eBH < input$taxa_pval_up &

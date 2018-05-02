@@ -7,18 +7,19 @@ library(plotly)
 library(grid)
 library(gridExtra)
 library(base)
-library(rPython)
+#library(rPython)
 library(data.table)
 library(stringr)
 library(randomcoloR)
 library(gplots)
 library(tidyr)
 library(dplyr)
-#library(DESeq2)
 library(viridis)
 library(matrixStats)
 library(webshot)
 library(ALDEx2)
+
+
 
 ## ggplot legend extract
 g_legend<-function(a.gplot){
@@ -864,4 +865,100 @@ custom_export <- function (p = last_plot(), file = "plotly.png", selenium = NULL
   message(sprintf("Success! Check your downloads folder for a file named: '%s'", 
                   file))
   invisible(file)
+}
+
+
+
+#
+#
+#
+#
+
+##### aldex functions
+
+aldex.ttest2 <- function (clr, conditions, paired.test = FALSE, hist.plot = FALSE) 
+{
+  smpl.ids <- getSampleIDs(clr)
+  feature.names <- getFeatureNames(clr)
+  feature.number <- numFeatures(clr)
+  mc.instances <- numMCInstances(clr)
+  conditions <- as.factor(conditions)
+  levels <- levels(conditions)
+  if (length(conditions) != numConditions(clr)) {
+    stop(paste("mismatch btw 'length(conditions)' and 'length(names(clr))'. len(condtitions):", 
+               length(conditions), "len(names(clr)):", numConditions(clr)))
+  }
+  if (length(levels) != 2) 
+    stop("only two condition levels are currently supported")
+  levels <- vector("list", length(levels))
+  names(levels) <- levels(conditions)
+  sets <- names(levels)
+  setAsBinary <- as.numeric(conditions == sets[1])
+  setA <- which(conditions == sets[1])
+  setB <- which(conditions == sets[2])
+  wi.p.matrix <- as.data.frame(matrix(1, nrow = feature.number, 
+                                      ncol = mc.instances))
+  wi.BH.matrix <- wi.p.matrix
+  we.p.matrix <- wi.p.matrix
+  we.BH.matrix <- wi.p.matrix
+  print("running tests for each MC instance:")
+  mc.all <- getMonteCarloInstances(clr)
+  for (mc.i in 1:mc.instances) {
+    numTicks <- progress(mc.i, mc.instances, numTicks)
+    t.input <- sapply(mc.all, function(y) {
+      y[, mc.i]
+    })
+    for (j in 1:nrow(t.input)){
+      wi.p.matrix[j, mc.i] <- wilcox.test(t.input[j,1:length(setA)], t.input[j,c(length(setA)+1):c(length(setA)+length(setB))], 
+                                          paired = paired.test)$p.value
+      
+      wi.BH.matrix[j, mc.i] <- p.adjust(wi.p.matrix[j, mc.i], 
+                                        method = "BH")
+      
+      #we.p.matrix[, mc.i] <- t.fast(t.input, setAsBinary, paired.test)
+      
+      we.p.matrix[j, mc.i] <- t.test(t.input[j,1:length(setA)], t.input[j,c(length(setA)+1):c(length(setA)+length(setB))], 
+                                     paired = paired.test)$p.value
+      
+      we.BH.matrix[j, mc.i] <- p.adjust(we.p.matrix[j, mc.i], 
+                                        method = "BH")
+    }
+  }
+  if (hist.plot == TRUE) {
+    par(mfrow = c(2, 2))
+    hist(we.p.matrix[, 1], breaks = 99, main = "Welch's P values Instance 1")
+    hist(wi.p.matrix[, 1], breaks = 99, main = "Wilcoxon P values Instance 1")
+    hist(we.BH.matrix[, 1], breaks = 99, main = "Welch's BH values Instance 1")
+    hist(wi.BH.matrix[, 1], breaks = 99, main = "Wilcoxon BH values Instance 1")
+    par(mfrow = c(1, 1))
+  }
+  we.ep <- rowMeans(we.p.matrix)
+  we.eBH <- rowMeans(we.BH.matrix)
+  wi.ep <- rowMeans(wi.p.matrix)
+  wi.eBH <- rowMeans(wi.BH.matrix)
+  z <- data.frame(we.ep, we.eBH, wi.ep, wi.eBH)
+  rownames(z) <- getFeatureNames(clr)
+  return(z)
+}
+
+
+
+progress <- function(i, k, numTicks){
+  
+  if(i == 1) numTicks <- 0
+  
+  if(numTicks == 0) cat("|-")
+  
+  while(i > numTicks*(k/40)){
+    
+    cat("-")
+    if(numTicks == 10) cat("(25%)")
+    if(numTicks == 20) cat("(50%)")
+    if(numTicks == 30) cat("(75%)")
+    numTicks <- numTicks + 1
+  }
+  
+  if(i == k) cat("-|\n")
+  
+  return(numTicks)
 }

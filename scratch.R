@@ -1,4 +1,21 @@
 ### Scratch for new WHAM! revisions 3.28
+#library(R.utils)
+#library(SummarizedExperiment)
+#sourceDirectory("ALDEx2", verbose=T)
+
+# source("ALDEx2/AllGenerics.R")
+# source("ALDEx2/AllClasses.R")
+# source("ALDEx2/progress.R")
+# source("ALDEx2/clr_effect.r")
+# source("ALDEx2/clr_function.r")
+# source("ALDEx2/clr_ttest.r")
+# source("ALDEX2/aldex.r")
+# source("ALDEX2/stats.fast.R")
+# source("ALDEX2/rdirichlet.R")
+# source("ALDEX2/iqlr_features.r")
+# source("ALDEX2/clr_glm.r")
+# source("ALDEX2/clr_corr.r")
+# source("ALDEX2/plot.aldex.r")
 
 #####
 
@@ -112,7 +129,7 @@ buggah_new <- buggah[tax_lev,]
 ####### raw count estimation
 setwd("/Users/jcooperdevlin/Desktop/Kelly/wham_revisions3.7")
 library(data.table)
-library(metagenomeSeq)
+#library(metagenomeSeq)
 source("/Users/jcooperdevlin/Desktop/Itai/ST_app/heater3/R/heatmap.3.R")
 library(viridis)
 library(ggplot2)
@@ -209,7 +226,7 @@ dev.off()
 ##### differential taxa play
 setwd("/Users/jcooperdevlin/Desktop/Kelly/wham_revisions3.28")
 library(data.table)
-library(metagenomeSeq)
+#library(metagenomeSeq)
 source("/Users/jcooperdevlin/Desktop/Itai/ST_app/heater3/R/heatmap.3.R")
 library(viridis)
 library(ggplot2)
@@ -688,7 +705,7 @@ for (i in 1:length(bug_levels)){
 ##### differential taxa play
 setwd("/Users/jcooperdevlin/Desktop/Kelly/wham_revisions3.28")
 library(data.table)
-library(DESeq2)
+#library(DESeq2)
 source("/Users/jcooperdevlin/Desktop/Itai/ST_app/heater3/R/heatmap.3.R")
 library(viridis)
 library(ggplot2)
@@ -1684,10 +1701,21 @@ setdiff(total, haves)
 #
 #
 #### 1-D aldex?
+library(ALDEx2)
+library(SummarizedExperiment)
+library(GenomicRanges)
+library(IRanges)
+library(Biobase)
+library(BiocGenerics)
+library(multtest)
+
+
+wilcox.test(t.input[2,1:25], t.input[2,26:50])
+
 
 names <- paste0("g_", 1:50)
-nums <- sample(1000, 25)
-nums <- c(nums, rep(c(5,2,4,5,2),5))
+nums3 <- abs(round(c(rnorm(25), rnorm(25,100)), 0))
+nums <- rbind(nums,nums2, nums3)
 
 h <- data.frame(nums)
 h <- t(h)
@@ -1697,13 +1725,102 @@ conds <- c(rep('a', 25), rep('b', 25))
 
 hh <- data.frame(h)
 names(hh) <- names
-hh2 <- rbind(hh, hh)
+#hh2 <- rbind(hh, hh)
 
-x <- aldex.clr(hh2, conds = conds, mc.samples = 16)
-x.tt <- aldex.ttest(x, conds, paired.test = T)
+x <- aldex.clr(hh, conds = conds, mc.samples = 16)
+#x.tt <- try(aldex.ttest(x, conds, paired.test = T))
 aldex.glm(x, conds)
 x.effect = aldex.effect(x, conditions = conds)
 
+######ttets debug?
+
+
+clr <- x
+conditions <- conds
+paired.test = F
+hist.plot = F
+aldex.ttest2 <- function (clr, conditions, paired.test = FALSE, hist.plot = FALSE) 
+{
+  smpl.ids <- getSampleIDs(clr)
+  feature.names <- getFeatureNames(clr)
+  feature.number <- numFeatures(clr)
+  mc.instances <- numMCInstances(clr)
+  conditions <- as.factor(conditions)
+  levels <- levels(conditions)
+  if (length(conditions) != numConditions(clr)) {
+    stop(paste("mismatch btw 'length(conditions)' and 'length(names(clr))'. len(condtitions):", 
+               length(conditions), "len(names(clr)):", numConditions(clr)))
+  }
+  if (length(levels) != 2) 
+    stop("only two condition levels are currently supported")
+  levels <- vector("list", length(levels))
+  names(levels) <- levels(conditions)
+  sets <- names(levels)
+  setAsBinary <- as.numeric(conditions == sets[1])
+  setA <- which(conditions == sets[1])
+  setB <- which(conditions == sets[2])
+  wi.p.matrix <- as.data.frame(matrix(1, nrow = feature.number, 
+                                      ncol = mc.instances))
+  wi.BH.matrix <- wi.p.matrix
+  we.p.matrix <- wi.p.matrix
+  we.BH.matrix <- wi.p.matrix
+  print("running tests for each MC instance:")
+  mc.all <- getMonteCarloInstances(clr)
+  for (mc.i in 1:mc.instances) {
+    numTicks <- progress(mc.i, mc.instances, numTicks)
+    t.input <- sapply(mc.all, function(y) {
+      y[, mc.i]
+    })
+    for (j in 1:nrow(t.input)){
+      wi.p.matrix[j, mc.i] <- wilcox.test(t.input[j,1:length(setA)], t.input[j,c(length(setA)+1):c(length(setA)+length(setB))], 
+                                         paired = paired.test)$p.value
+      
+      wi.BH.matrix[j, mc.i] <- p.adjust(wi.p.matrix[j, mc.i], 
+                                       method = "BH")
+      
+      #we.p.matrix[, mc.i] <- t.fast(t.input, setAsBinary, paired.test)
+      
+      we.p.matrix[j, mc.i] <- t.test(t.input[j,1:length(setA)], t.input[j,c(length(setA)+1):c(length(setA)+length(setB))], 
+                                    paired = paired.test)$p.value
+      
+      we.BH.matrix[j, mc.i] <- p.adjust(we.p.matrix[j, mc.i], 
+                                       method = "BH")
+    }
+  }
+  if (hist.plot == TRUE) {
+    par(mfrow = c(2, 2))
+    hist(we.p.matrix[, 1], breaks = 99, main = "Welch's P values Instance 1")
+    hist(wi.p.matrix[, 1], breaks = 99, main = "Wilcoxon P values Instance 1")
+    hist(we.BH.matrix[, 1], breaks = 99, main = "Welch's BH values Instance 1")
+    hist(wi.BH.matrix[, 1], breaks = 99, main = "Wilcoxon BH values Instance 1")
+    par(mfrow = c(1, 1))
+  }
+  we.ep <- rowMeans(we.p.matrix)
+  we.eBH <- rowMeans(we.BH.matrix)
+  wi.ep <- rowMeans(wi.p.matrix)
+  wi.eBH <- rowMeans(wi.BH.matrix)
+  z <- data.frame(we.ep, we.eBH, wi.ep, wi.eBH)
+  rownames(z) <- getFeatureNames(clr)
+  return(z)
+}
+
+
+
+
+#
+#
+#
+#
+
+#
+#
+#
+#
+#
+
+#
+#
+#####
 
 
 #
@@ -1797,3 +1914,47 @@ heatmap.2(data.matrix(resm),
           cexCol=1.2#,
 )
 title(select_feat, line= -2.5)
+
+
+#####
+
+
+
+
+img_names <- read.table("/Users/jcooperdevlin/Desktop/img_names.txt",
+                        header=F, sep='\t')
+keeps <- read.table("/Users/jcooperdevlin/Desktop/keeper_table_full4.21.txt",
+                    header=F, sep='\t')
+
+img_names2 <- gsub("_Abundance.RPKs.tsv", "", img_names$V1)
+
+add_names <- setdiff(img_names2, keeps$V1)
+
+###
+
+rownames(keeps) <- paste0(keeps$V1, "_Abundance.RPKs.tsv")
+keeps2 <- keeps[img_names$V1,]
+
+keeps3 <- subset(keeps2, !is.na(V1))
+
+keeps3$filename <- rownames(keeps3)
+
+
+####
+keeps4 <- data.frame(V1 = NA, V2=NA, V3 = NA, V4 = NA, filename = NA)
+for (i in 1:length(add_names)){
+  curr_name <- add_names[i]
+  if (curr_name != "feature_index.txt"){
+  base <- gsub("_.*", "", curr_name)
+  item <- subset(keeps3, V1 == base)
+  item$filename <- curr_name
+  keeps4 <- rbind(keeps4, item)
+  }
+}
+
+
+
+
+keeps5 <- rbind(keeps3, keeps4[-1,])
+
+
