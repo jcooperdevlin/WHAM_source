@@ -1,0 +1,12 @@
+name: wham_v1
+title: wham_v1
+username:
+account: ruggleslab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 215730
+bundleId: 1866152
+url: https://ruggleslab.shinyapps.io/wham_v1/
+when: 1549742232.17987
+asMultiple: FALSE
+asStatic: FALSE
