@@ -5,8 +5,8 @@ account: ruggleslab
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 215730
-bundleId: 1866152
+bundleId: 1878456
 url: https://ruggleslab.shinyapps.io/wham_v1/
-when: 1549742232.17987
+when: 1550248668.65314
 asMultiple: FALSE
 asStatic: FALSE
