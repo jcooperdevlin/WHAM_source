@@ -114,13 +114,17 @@ server <- function(input, output, session) {
         checker <- apply(nums, 1, is.integer)
         if (!all(checker==T)){
           num_check <- mean(colSums(nums))
-          if(num_check < 1000000){
-            nums <- nums*1000000
+          if(num_check < 100000){
+            nums <- nums*100000
             nums <- round(nums,0)
             nums <- t(apply(nums, 1, as.integer))
             colnames(nums) <- cols
             m_count <<- c("Input not a count matrix, values converted to integers and scaled to 1million where applicable")
-          }
+          } else {
+            nums <- round(nums,0)
+            nums <- t(apply(nums, 1, as.integer))
+            colnames(nums) <- cols
+            }
         } else {m_count <<- c("")}
         checker <- apply(nums, 1, is.integer)
         validate(
