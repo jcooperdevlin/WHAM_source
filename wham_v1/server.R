@@ -1,5 +1,11 @@
 
+#when publsihing bioconductor source error
+#options(repos = BiocInstaller::biocinstallRepos())
+#getOption("repos")
+
+
 ### control size of input file
+
 options(shiny.maxRequestSize=200*1024^2)
 
 `%then%` <- shiny:::`%OR%`
