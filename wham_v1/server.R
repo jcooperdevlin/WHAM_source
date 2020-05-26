@@ -201,7 +201,7 @@ server <- function(input, output, session) {
   })
   
   # Preview Full File
-  output$contents <- renderDataTable({
+  output$contents <- DT::renderDataTable({
     validate(
       need(full_file_feature(),"")
     )
@@ -221,10 +221,10 @@ server <- function(input, output, session) {
         full_file_show <- full_file[1:50, 1:10]
       }
     }
-    full_file_show
+    datatable(full_file_show) %>% formatStyle(T, color="white", background="#2c3e4f")
   })
   
-  output$contents_taxa <- renderDataTable({
+  output$contents_taxa <- DT::renderDataTable({
     validate(
       need(full_file_taxa(),"")
     )
@@ -235,7 +235,7 @@ server <- function(input, output, session) {
     else{
       full_file_show <- full_file[1:50, 1:ncol(full_file)]
     }
-    full_file_show
+    datatable(full_file_show) %>% formatStyle(T, color="white", background="#2c3e4f")
   })
   
   output$temp_info1 <- renderUI({
@@ -263,7 +263,7 @@ server <- function(input, output, session) {
     HTML(paste('<br/>', m5, m6, sep = '<br/>'))
   })
   
-  output$temp_df <- renderDataTable({
+  output$temp_df <- DT::renderDataTable({
     if (input$input_type == "Biobakery"){
       Acc <- paste0("0000", 1:5)
       Feature <- paste0("Feature", 1:5)
@@ -285,10 +285,10 @@ server <- function(input, output, session) {
       colnames(num_mat) = paste0("Sample", 1:5)
       sample_df <- cbind(Acc, Feature, num_mat)
     }
-    sample_df
+    datatable(sample_df) %>% formatStyle(T, color="white", background="#2c3e4f")
   })
   
-  output$temp_taxa <- renderDataTable({
+  output$temp_taxa <- DT::renderDataTable({
     Taxa <- c(paste0("Bug", 1:3), paste0("Bug", 1:2))
     num_mat <- matrix(NA,5,5)
     for (i in 1:ncol(num_mat)){
@@ -296,7 +296,7 @@ server <- function(input, output, session) {
     }
     colnames(num_mat) = paste0("Sample", 1:5)
     sample_df <- cbind(Taxa, num_mat)
-    sample_df
+    datatable(sample_df) %>% formatStyle(T, color="white", background="#2c3e4f")
   })
   
   observe({
